@@ -1,0 +1,12 @@
+[package]
+name = "mpc"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "mpc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "simple_test"
+path = "examples/simple_test.rs"
