@@ -2,6 +2,10 @@
 name = "mpc"
 version = "0.1.0"
 edition = "2021"
+authors = ["Abhishek Kumar <mr.kumar.abhishek@outlook.in>"]
+license = "MIT"
+description = "A lightweight and powerful Parser Combinator library for Rust"
+repository = "https://github.com/yourusername/mpc-rs"  # Update with actual repo
 
 [lib]
 name = "mpc"
