@@ -82,6 +82,12 @@ pub enum MpcParserType {
     Or(Vec<Box<MpcParser>>),  // Alternative parsers
     Many(Box<MpcParser>, fn(i32, Vec<MpcVal>) -> MpcVal),  // Zero or more
     Many1(Box<MpcParser>, fn(i32, Vec<MpcVal>) -> MpcVal),  // One or more
+    Count(i32, Box<MpcParser>, fn(i32, Vec<MpcVal>) -> MpcVal),  // Exactly n times
+    SepBy(Box<MpcParser>, Box<MpcParser>, fn(i32, Vec<MpcVal>) -> MpcVal),  // Separated by
+    SepBy1(Box<MpcParser>, Box<MpcParser>, fn(i32, Vec<MpcVal>) -> MpcVal),  // One or more separated by
+    // AST Building
+    Tag(Box<MpcParser>, String),  // Add tag to result
+    Root(Box<MpcParser>),  // Make root of AST
 }
 
 /// Parser
@@ -389,6 +395,30 @@ impl MpcParser {
                 let folded = fold(results.len() as i32, results);
                 MpcResult::Ok(folded)
             }
+            MpcParserType::Tag(ref parser, ref tag) => {
+                match parser.parse(input) {
+                    MpcResult::Ok(val) => {
+                        // Create AST node with tag
+                        let ast = MpcAst::new(tag, &format!("{:?}", val));
+                        MpcResult::Ok(Box::new(ast))
+                    }
+                    MpcResult::Err(e) => MpcResult::Err(e),
+                }
+            }
+            MpcParserType::Root(ref parser) => {
+                match parser.parse(input) {
+                    MpcResult::Ok(val) => {
+                        // Make it root
+                        if let Ok(mut ast) = val.downcast::<MpcAst>() {
+                            ast.tag = "root".to_string();
+                            MpcResult::Ok(Box::new(ast))
+                        } else {
+                            MpcResult::Ok(val)
+                        }
+                    }
+                    MpcResult::Err(e) => MpcResult::Err(e),
+                }
+            }
             MpcParserType::Or(ref parsers) => {
                 for parser in parsers {
                     match parser.parse(input) {
@@ -419,6 +449,63 @@ impl MpcParser {
                 loop {
                     match parser.parse(input) {
                         MpcResult::Ok(val) => results.push(val),
+                        MpcResult::Err(_) => break,
+                    }
+                }
+                let folded = fold(results.len() as i32, results);
+                MpcResult::Ok(folded)
+            }
+            MpcParserType::Count(n, ref parser, fold) => {
+                let mut results = Vec::new();
+                for _ in 0..n {
+                    match parser.parse(input) {
+                        MpcResult::Ok(val) => results.push(val),
+                        MpcResult::Err(e) => return MpcResult::Err(e),
+                    }
+                }
+                let folded = fold(results.len() as i32, results);
+                MpcResult::Ok(folded)
+            }
+            MpcParserType::SepBy(ref parser, ref sep, fold) => {
+                let mut results = Vec::new();
+                // Optional first parser
+                if let MpcResult::Ok(val) = parser.parse(input) {
+                    results.push(val);
+                    loop {
+                        // Try separator
+                        match sep.parse(input) {
+                            MpcResult::Ok(_) => {
+                                // Then parser
+                                match parser.parse(input) {
+                                    MpcResult::Ok(val) => results.push(val),
+                                    MpcResult::Err(_) => break,
+                                }
+                            }
+                            MpcResult::Err(_) => break,
+                        }
+                    }
+                }
+                let folded = fold(results.len() as i32, results);
+                MpcResult::Ok(folded)
+            }
+            MpcParserType::SepBy1(ref parser, ref sep, fold) => {
+                let mut results = Vec::new();
+                // First parser required
+                let first = match parser.parse(input) {
+                    MpcResult::Ok(val) => val,
+                    MpcResult::Err(e) => return MpcResult::Err(e),
+                };
+                results.push(first);
+                loop {
+                    // Try separator
+                    match sep.parse(input) {
+                        MpcResult::Ok(_) => {
+                            // Then parser
+                            match parser.parse(input) {
+                                MpcResult::Ok(val) => results.push(val),
+                                MpcResult::Err(_) => break,
+                            }
+                        }
                         MpcResult::Err(_) => break,
                     }
                 }
@@ -462,5 +549,164 @@ pub fn mpc_many1(parser: MpcParser, fold: fn(i32, Vec<MpcVal>) -> MpcVal) -> Mpc
     MpcParser {
         name: "many1".to_string(),
         parser_type: MpcParserType::Many1(Box::new(parser), fold),
+    }
+}
+
+pub fn mpc_count(n: i32, parser: MpcParser, fold: fn(i32, Vec<MpcVal>) -> MpcVal) -> MpcParser {
+    MpcParser {
+        name: format!("count:{}", n),
+        parser_type: MpcParserType::Count(n, Box::new(parser), fold),
+    }
+}
+
+pub fn mpc_sepby(parser: MpcParser, sep: MpcParser, fold: fn(i32, Vec<MpcVal>) -> MpcVal) -> MpcParser {
+    MpcParser {
+        name: "sepby".to_string(),
+        parser_type: MpcParserType::SepBy(Box::new(parser), Box::new(sep), fold),
+    }
+}
+
+pub fn mpc_sepby1(parser: MpcParser, sep: MpcParser, fold: fn(i32, Vec<MpcVal>) -> MpcVal) -> MpcParser {
+    MpcParser {
+        name: "sepby1".to_string(),
+        parser_type: MpcParserType::SepBy1(Box::new(parser), Box::new(sep), fold),
+    }
+}
+
+// Common Fold Functions
+
+pub fn mpcf_strfold(n: i32, xs: Vec<MpcVal>) -> MpcVal {
+    let mut result = String::new();
+    for x in xs {
+        if let Ok(s) = x.downcast::<String>() {
+            result.push_str(&s);
+        }
+    }
+    Box::new(result)
+}
+
+pub fn mpcf_fst(_n: i32, xs: Vec<MpcVal>) -> MpcVal {
+    if xs.is_empty() {
+        Box::new(())
+    } else {
+        xs.into_iter().next().unwrap()
+    }
+}
+
+pub fn mpcf_null(_n: i32, _xs: Vec<MpcVal>) -> MpcVal {
+    Box::new(())
+}
+
+// Utility Parsers
+
+pub fn mpc_eoi() -> MpcParser {
+    MpcParser {
+        name: "eoi".to_string(),
+        parser_type: MpcParserType::Anchor(|_prev, next| next == '\0'),
+    }
+}
+
+pub fn mpc_soi() -> MpcParser {
+    MpcParser {
+        name: "soi".to_string(),
+        parser_type: MpcParserType::Anchor(|prev, _next| prev == '\0'),
+    }
+}
+
+pub fn mpc_boundary() -> MpcParser {
+    mpc_boundary_newline()
+}
+
+pub fn mpc_boundary_newline() -> MpcParser {
+    MpcParser {
+        name: "boundary_newline".to_string(),
+        parser_type: MpcParserType::Anchor(|prev, next| {
+            (prev == '\0' || !prev.is_alphanumeric() && prev != '_') &&
+            (next == '\0' || !next.is_alphanumeric() && next != '_')
+        }),
+    }
+}
+
+pub fn mpc_whitespace() -> MpcParser {
+    mpc_oneof(" \t\n\r")
+}
+
+pub fn mpc_whitespaces() -> MpcParser {
+    mpc_many(mpc_whitespace(), mpcf_strfold)
+}
+
+pub fn mpc_blank() -> MpcParser {
+    mpc_oneof(" \t")
+}
+
+pub fn mpc_newline() -> MpcParser {
+    mpc_char('\n')
+}
+
+pub fn mpc_tab() -> MpcParser {
+    mpc_char('\t')
+}
+
+pub fn mpc_escape() -> MpcParser {
+    mpc_char('\\')
+}
+
+pub fn mpc_digit() -> MpcParser {
+    mpc_range('0', '9')
+}
+
+pub fn mpc_hexdigit() -> MpcParser {
+    mpc_or(vec![mpc_range('0', '9'), mpc_range('a', 'f'), mpc_range('A', 'F')])
+}
+
+pub fn mpc_octdigit() -> MpcParser {
+    mpc_range('0', '7')
+}
+
+pub fn mpc_digits() -> MpcParser {
+    mpc_many1(mpc_digit(), mpcf_strfold)
+}
+
+pub fn mpc_hexdigits() -> MpcParser {
+    mpc_many1(mpc_hexdigit(), mpcf_strfold)
+}
+
+pub fn mpc_octdigits() -> MpcParser {
+    mpc_many1(mpc_octdigit(), mpcf_strfold)
+}
+
+pub fn mpc_lower() -> MpcParser {
+    mpc_range('a', 'z')
+}
+
+pub fn mpc_upper() -> MpcParser {
+    mpc_range('A', 'Z')
+}
+
+pub fn mpc_alpha() -> MpcParser {
+    mpc_or(vec![mpc_lower(), mpc_upper()])
+}
+
+pub fn mpc_underscore() -> MpcParser {
+    mpc_char('_')
+}
+
+pub fn mpc_alphanum() -> MpcParser {
+    mpc_or(vec![mpc_alpha(), mpc_digit()])
+}
+
+// TODO: Implement int, hex, oct, number, real, float, char_lit, string_lit, regex_lit, ident
+
+pub fn mpca_tag(parser: MpcParser, tag: &str) -> MpcParser {
+    MpcParser {
+        name: format!("tag:{}", tag),
+        parser_type: MpcParserType::Tag(Box::new(parser), tag.to_string()),
+    }
+}
+
+pub fn mpca_root(parser: MpcParser) -> MpcParser {
+    MpcParser {
+        name: "root".to_string(),
+        parser_type: MpcParserType::Root(Box::new(parser)),
     }
 }
