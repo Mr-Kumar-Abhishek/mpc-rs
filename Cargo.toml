@@ -10,7 +10,3 @@ repository = "https://github.com/Mr-Kumar-Abhishek/mpc-rs"
 [lib]
 name = "mpc"
 path = "src/lib.rs"
-
-[[bin]]
-name = "simple_test"
-path = "examples/simple_test.rs"
