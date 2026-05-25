@@ -480,12 +480,21 @@ impl MpcParser {
                 // Optional first parser
                 if let MpcResult::Ok(val) = parser.parse(input) {
                     results.push(val);
-                    while let MpcResult::Ok(_) = sep.parse(input) {
-                        // Try separator succeeded, now parse value
-                        if let MpcResult::Ok(val) = parser.parse(input) {
-                            results.push(val);
-                        } else {
-                            break;
+                    loop {
+                        let saved_pos = input.pos;
+                        let saved_state = input.state;
+                        match sep.parse(input) {
+                            MpcResult::Ok(_) => {
+                                match parser.parse(input) {
+                                    MpcResult::Ok(val) => results.push(val),
+                                    MpcResult::Err(_) => {
+                                        input.pos = saved_pos;
+                                        input.state = saved_state;
+                                        break;
+                                    }
+                                }
+                            }
+                            MpcResult::Err(_) => break,
                         }
                     }
                 }
@@ -500,12 +509,21 @@ impl MpcParser {
                     MpcResult::Err(e) => return MpcResult::Err(e),
                 };
                 results.push(first);
-                while let MpcResult::Ok(_) = sep.parse(input) {
-                    // Try separator succeeded, now parse value
-                    if let MpcResult::Ok(val) = parser.parse(input) {
-                        results.push(val);
-                    } else {
-                        break;
+                loop {
+                    let saved_pos = input.pos;
+                    let saved_state = input.state;
+                    match sep.parse(input) {
+                        MpcResult::Ok(_) => {
+                            match parser.parse(input) {
+                                MpcResult::Ok(val) => results.push(val),
+                                MpcResult::Err(_) => {
+                                    input.pos = saved_pos;
+                                    input.state = saved_state;
+                                    break;
+                                }
+                            }
+                        }
+                        MpcResult::Err(_) => break,
                     }
                 }
                 let folded = fold(results.len() as i32, results);
