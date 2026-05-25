@@ -325,7 +325,7 @@ impl MpcParser {
                         MpcResult::Err(MpcErr::new(input.state, vec![format!("not {}", chars)], format!("unexpected one of '{}'", chars), c))
                     }
                 } else {
-                    MpcResult::Ok(Box::new("".to_string())) // EOF is fine
+                    MpcResult::Err(MpcErr::new(input.state, vec![format!("not {}", chars)], "unexpected end of input".to_string(), '\0'))
                 }
             }
             MpcParserType::Satisfy(f) => {
