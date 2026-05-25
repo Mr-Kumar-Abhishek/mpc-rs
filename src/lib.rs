@@ -410,12 +410,20 @@ impl MpcParser {
                 }
             }
             MpcParserType::Or(ref parsers) => {
+                let mut last_err = None;
                 for parser in parsers {
-                    if let MpcResult::Ok(val) = parser.parse(input) {
-                        return MpcResult::Ok(val);
+                    let saved_pos = input.pos;
+                    let saved_state = input.state;
+                    match parser.parse(input) {
+                        MpcResult::Ok(val) => return MpcResult::Ok(val),
+                        MpcResult::Err(e) => {
+                            input.pos = saved_pos;
+                            input.state = saved_state;
+                            last_err = Some(e);
+                        }
                     }
                 }
-                MpcResult::Err(MpcErr::new(input.state, vec!["or".to_string()], "no alternatives matched".to_string(), '\0'))
+                MpcResult::Err(last_err.unwrap_or_else(|| MpcErr::new(input.state, vec!["or".to_string()], "no alternatives matched".to_string(), '\0')))
             }
             MpcParserType::Many(ref parser, fold) => {
                 let mut results = Vec::new();
