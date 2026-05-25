@@ -341,15 +341,21 @@ impl MpcParser {
                 }
             }
             MpcParserType::String(s) => {
+                let saved_pos = input.pos;
+                let saved_state = input.state;
                 for expected in s.chars() {
                     if let Some(c) = input.peek() {
                         if c == expected {
                             input.advance();
                         } else {
-                            return MpcResult::Err(MpcErr::new(input.state, vec![s.clone()], format!("expected '{}'", s), c));
+                            input.pos = saved_pos;
+                            input.state = saved_state;
+                            return MpcResult::Err(MpcErr::new(saved_state, vec![s.clone()], format!("expected '{}'", s), c));
                         }
                     } else {
-                        return MpcResult::Err(MpcErr::new(input.state, vec![s.clone()], format!("expected '{}'", s), '\0'));
+                        input.pos = saved_pos;
+                        input.state = saved_state;
+                        return MpcResult::Err(MpcErr::new(saved_state, vec![s.clone()], format!("expected '{}'", s), '\0'));
                     }
                 }
                 MpcResult::Ok(Box::new(s.clone()))
