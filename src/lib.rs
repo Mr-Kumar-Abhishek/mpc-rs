@@ -334,7 +334,6 @@ impl MpcParser {
                         input.advance();
                         MpcResult::Ok(Box::new(c.to_string()))
                     } else {
-                        input.advance();
                         MpcResult::Err(MpcErr::new(input.state, vec!["satisfy".to_string()], "char does not satisfy condition".to_string(), c))
                     }
                 } else {
