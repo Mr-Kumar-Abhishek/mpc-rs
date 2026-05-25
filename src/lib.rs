@@ -638,8 +638,8 @@ pub fn mpc_boundary_newline() -> MpcParser {
     MpcParser {
         name: "boundary_newline".to_string(),
         parser_type: MpcParserType::Anchor(|prev, next| {
-            (prev == '\0' || !prev.is_alphanumeric() && prev != '_') &&
-            (next == '\0' || !next.is_alphanumeric() && next != '_')
+            (prev == '\0' || (!prev.is_alphanumeric() && prev != '_')) &&
+            (next == '\0' || (!next.is_alphanumeric() && next != '_'))
         }),
     }
 }
