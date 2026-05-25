@@ -427,8 +427,17 @@ impl MpcParser {
             }
             MpcParserType::Many(ref parser, fold) => {
                 let mut results = Vec::new();
-                while let MpcResult::Ok(val) = parser.parse(input) {
-                    results.push(val);
+                loop {
+                    let before = input.pos;
+                    match parser.parse(input) {
+                        MpcResult::Ok(val) => {
+                            results.push(val);
+                            if input.pos == before {
+                                break;
+                            }
+                        }
+                        MpcResult::Err(_) => break,
+                    }
                 }
                 let folded = fold(results.len() as i32, results);
                 MpcResult::Ok(folded)
@@ -440,8 +449,17 @@ impl MpcParser {
                     MpcResult::Err(e) => return MpcResult::Err(e),
                 };
                 results.push(first);
-                while let MpcResult::Ok(val) = parser.parse(input) {
-                    results.push(val);
+                loop {
+                    let before = input.pos;
+                    match parser.parse(input) {
+                        MpcResult::Ok(val) => {
+                            results.push(val);
+                            if input.pos == before {
+                                break;
+                            }
+                        }
+                        MpcResult::Err(_) => break,
+                    }
                 }
                 let folded = fold(results.len() as i32, results);
                 MpcResult::Ok(folded)
