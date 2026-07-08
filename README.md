@@ -9,6 +9,8 @@ A lightweight and powerful Parser Combinator library for Rust, ported from the C
 
 _mpc-rs_ is a parser combinator library that allows you to build powerful parsers using simple, composable building blocks. Parser combinators are functions that take parsers as input and return new parsers as output, enabling you to construct complex parsers from simple ones.
 
+For a rough COCOMO-based project cost estimate covering the organic, semi-detached, and embedded variants, see [COCOMO-cost-estimate.md](COCOMO-cost-estimate.md).
+
 ### When to Use mpc-rs
 
 You should consider using _mpc-rs_ when you need to:
