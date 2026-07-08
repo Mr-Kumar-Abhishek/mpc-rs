@@ -8,6 +8,7 @@ This document provides a rough effort and schedule estimate for the current stat
 - Source basis: the repository currently contains roughly 775 lines of code across the library and example files
 - Model used: Basic COCOMO
 - Unit: person-months (PM)
+- Estimated price assumption: $5,000 per person-month for a small Rust software project
 
 ## COCOMO formulas
 
@@ -25,11 +26,11 @@ This document provides a rough effort and schedule estimate for the current stat
 
 ## Estimated results
 
-| Model | Effort (PM) | Duration (months) | Average team size |
-|---|---:|---:|---:|
-| Organic | 1.84 | 3.14 | 0.58 |
-| Semi-detached | 2.27 | 3.33 | 0.68 |
-| Embedded | 2.68 | 3.43 | 0.78 |
+| Model | Effort (PM) | Duration (months) | Average team size | Estimated price |
+|---|---:|---:|---:|---:|
+| Organic | 1.84 | 3.14 | 0.58 | $9,200 |
+| Semi-detached | 2.27 | 3.33 | 0.68 | $11,350 |
+| Embedded | 2.68 | 3.43 | 0.78 | $13,400 |
 
 ## Notes
 
