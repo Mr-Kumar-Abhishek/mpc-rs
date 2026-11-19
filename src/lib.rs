@@ -53,6 +53,7 @@ pub enum MpcResult {
 }
 
 /// Parser Type
+#[derive(Clone)]
 pub enum MpcParserType {
     Any,  // Matches any character
     Char(char),  // Matches specific character
@@ -81,6 +82,7 @@ pub enum MpcParserType {
 }
 
 /// Parser
+#[derive(Clone)]
 pub struct MpcParser {
     pub name: String,
     pub parser_type: MpcParserType,
@@ -96,7 +98,7 @@ impl MpcParser {
 }
 
 /// AST Type
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MpcAst {
     pub tag: String,
     pub contents: String,
@@ -581,6 +583,13 @@ pub fn mpc_or(parsers: Vec<MpcParser>) -> MpcParser {
     }
 }
 
+pub fn mpc_maybe(parser: MpcParser) -> MpcParser {
+    MpcParser {
+        name: "maybe".to_string(),
+        parser_type: MpcParserType::Or(vec![Box::new(parser), Box::new(mpc_pass())]),
+    }
+}
+
 pub fn mpc_many(parser: MpcParser, fold: fn(i32, Vec<MpcVal>) -> MpcVal) -> MpcParser {
     MpcParser {
         name: "many".to_string(),
@@ -738,7 +747,97 @@ pub fn mpc_alphanum() -> MpcParser {
     mpc_or(vec![mpc_alpha(), mpc_digit()])
 }
 
-// TODO: Implement int, hex, oct, number, real, float, char_lit, string_lit, regex_lit, ident
+pub fn mpc_int() -> MpcParser {
+    mpc_and(vec![mpc_maybe(mpc_oneof("+-")), mpc_digits()], mpcf_strfold)
+}
+
+pub fn mpc_hex() -> MpcParser {
+    mpc_and(
+        vec![mpc_or(vec![mpc_string("0x"), mpc_string("0X")]), mpc_hexdigits()],
+        mpcf_strfold,
+    )
+}
+
+pub fn mpc_oct() -> MpcParser {
+    mpc_and(
+        vec![
+            mpc_or(vec![mpc_string("0o"), mpc_string("0O"), mpc_string("0")]),
+            mpc_octdigits(),
+        ],
+        mpcf_strfold,
+    )
+}
+
+pub fn mpc_number() -> MpcParser {
+    mpc_or(vec![mpc_hex(), mpc_oct(), mpc_int()])
+}
+
+pub fn mpc_real() -> MpcParser {
+    let exp = mpc_and(
+        vec![mpc_oneof("eE"), mpc_maybe(mpc_oneof("+-")), mpc_digits()],
+        mpcf_strfold,
+    );
+    let frac_with_opt_exp = mpc_and(
+        vec![mpc_char('.'), mpc_digits(), mpc_maybe(exp.clone())],
+        mpcf_strfold,
+    );
+    mpc_and(
+        vec![
+            mpc_maybe(mpc_oneof("+-")),
+            mpc_digits(),
+            mpc_or(vec![frac_with_opt_exp, exp]),
+        ],
+        mpcf_strfold,
+    )
+}
+
+pub fn mpc_float() -> MpcParser {
+    mpc_and(vec![mpc_real(), mpc_maybe(mpc_oneof("fF"))], mpcf_strfold)
+}
+
+pub fn mpc_escape_seq() -> MpcParser {
+    mpc_and(vec![mpc_escape(), mpc_any()], mpcf_strfold)
+}
+
+fn mpc_delimited_lit(delim: char, disallowed: &str) -> MpcParser {
+    mpc_and(
+        vec![
+            mpc_char(delim),
+            mpc_many(mpc_or(vec![mpc_escape_seq(), mpc_noneof(disallowed)]), mpcf_strfold),
+            mpc_char(delim),
+        ],
+        mpcf_strfold,
+    )
+}
+
+pub fn mpc_char_lit() -> MpcParser {
+    mpc_and(
+        vec![
+            mpc_char('\''),
+            mpc_or(vec![mpc_escape_seq(), mpc_noneof("'\\")]),
+            mpc_char('\''),
+        ],
+        mpcf_strfold,
+    )
+}
+
+pub fn mpc_string_lit() -> MpcParser {
+    mpc_delimited_lit('"', "\"\\")
+}
+
+pub fn mpc_regex_lit() -> MpcParser {
+    mpc_delimited_lit('/', "/\\")
+}
+
+pub fn mpc_ident() -> MpcParser {
+    mpc_and(
+        vec![
+            mpc_or(vec![mpc_alpha(), mpc_underscore()]),
+            mpc_many(mpc_or(vec![mpc_alphanum(), mpc_underscore()]), mpcf_strfold),
+        ],
+        mpcf_strfold,
+    )
+}
 
 pub fn mpca_tag(parser: MpcParser, tag: &str) -> MpcParser {
     MpcParser {
@@ -983,6 +1082,94 @@ mod tests {
         assert_eq!(input.state.pos, 0);
         assert_eq!(input.state.col, 0);
         assert_eq!(input.remaining(), "aab");
+    }
+
+    // --- Sprint 5 (US-07) Token, Literal & Maybe Combinator Tests ---
+
+    #[test]
+    fn int_hex_oct_and_number_parsers() {
+        assert_eq!(mpc_parse("test", "42", &mpc_int()).expect_ok_str(), Some("42"));
+        assert_eq!(mpc_parse("test", "-42", &mpc_int()).expect_ok_str(), Some("-42"));
+        assert_eq!(mpc_parse("test", "+7", &mpc_int()).expect_ok_str(), Some("+7"));
+
+        let mut bad_int = MpcInput::new("test", "-abc");
+        assert!(matches!(mpc_int().parse(&mut bad_int), MpcResult::Err(_)));
+        assert_eq!(bad_int.pos, 0);
+
+        assert_eq!(mpc_parse("test", "0x1aF", &mpc_hex()).expect_ok_str(), Some("0x1aF"));
+        assert_eq!(mpc_parse("test", "0XFF", &mpc_hex()).expect_ok_str(), Some("0XFF"));
+        let mut bad_hex = MpcInput::new("test", "0xzz");
+        assert!(matches!(mpc_hex().parse(&mut bad_hex), MpcResult::Err(_)));
+        assert_eq!(bad_hex.pos, 0);
+
+        assert_eq!(mpc_parse("test", "0o755", &mpc_oct()).expect_ok_str(), Some("0o755"));
+        assert_eq!(mpc_parse("test", "0O12", &mpc_oct()).expect_ok_str(), Some("0O12"));
+        assert_eq!(mpc_parse("test", "0755", &mpc_oct()).expect_ok_str(), Some("0755"));
+
+        assert_eq!(mpc_parse("test", "0x1aF", &mpc_number()).expect_ok_str(), Some("0x1aF"));
+        assert_eq!(mpc_parse("test", "0o755", &mpc_number()).expect_ok_str(), Some("0o755"));
+        assert_eq!(mpc_parse("test", "-99", &mpc_number()).expect_ok_str(), Some("-99"));
+        assert_eq!(mpc_parse("test", "0", &mpc_number()).expect_ok_str(), Some("0"));
+    }
+
+    #[test]
+    fn real_and_float_parsers() {
+        assert_eq!(mpc_parse("test", "3.14", &mpc_real()).expect_ok_str(), Some("3.14"));
+        assert_eq!(mpc_parse("test", "-0.5", &mpc_real()).expect_ok_str(), Some("-0.5"));
+        assert_eq!(mpc_parse("test", "2.5e-3", &mpc_real()).expect_ok_str(), Some("2.5e-3"));
+        assert_eq!(mpc_parse("test", "1e10", &mpc_real()).expect_ok_str(), Some("1e10"));
+        assert!(matches!(mpc_parse("test", "42", &mpc_real()), MpcResult::Err(_)));
+
+        let mut bad_real = MpcInput::new("test", "3.x");
+        assert!(matches!(mpc_real().parse(&mut bad_real), MpcResult::Err(_)));
+        assert_eq!(bad_real.pos, 0);
+
+        assert_eq!(mpc_parse("test", "3.14f", &mpc_float()).expect_ok_str(), Some("3.14f"));
+        assert_eq!(mpc_parse("test", "2.0F", &mpc_float()).expect_ok_str(), Some("2.0F"));
+        assert_eq!(mpc_parse("test", "2.0", &mpc_float()).expect_ok_str(), Some("2.0"));
+    }
+
+    #[test]
+    fn char_string_and_regex_literal_parsers() {
+        assert_eq!(mpc_parse("test", "'a'", &mpc_char_lit()).expect_ok_str(), Some("'a'"));
+        assert_eq!(mpc_parse("test", "'\\n'", &mpc_char_lit()).expect_ok_str(), Some("'\\n'"));
+        assert_eq!(mpc_parse("test", "'\\''", &mpc_char_lit()).expect_ok_str(), Some("'\\''"));
+
+        assert_eq!(mpc_parse("test", "\"hello\"", &mpc_string_lit()).expect_ok_str(), Some("\"hello\""));
+        assert_eq!(mpc_parse("test", "\"\"", &mpc_string_lit()).expect_ok_str(), Some("\"\""));
+        assert_eq!(
+            mpc_parse("test", "\"a\\\"b\\n\"", &mpc_string_lit()).expect_ok_str(),
+            Some("\"a\\\"b\\n\"")
+        );
+
+        let mut unterminated_str = MpcInput::new("test", "\"hello");
+        assert!(matches!(mpc_string_lit().parse(&mut unterminated_str), MpcResult::Err(_)));
+        assert_eq!(unterminated_str.pos, 0);
+
+        assert_eq!(mpc_parse("test", "/[a-z]+/", &mpc_regex_lit()).expect_ok_str(), Some("/[a-z]+/"));
+        assert_eq!(mpc_parse("test", "/a\\/b/", &mpc_regex_lit()).expect_ok_str(), Some("/a\\/b/"));
+
+        let mut unterminated_re = MpcInput::new("test", "/abc");
+        assert!(matches!(mpc_regex_lit().parse(&mut unterminated_re), MpcResult::Err(_)));
+        assert_eq!(unterminated_re.pos, 0);
+    }
+
+    #[test]
+    fn ident_and_maybe_parsers() {
+        assert_eq!(mpc_parse("test", "foo_bar123", &mpc_ident()).expect_ok_str(), Some("foo_bar123"));
+        assert_eq!(mpc_parse("test", "_temp", &mpc_ident()).expect_ok_str(), Some("_temp"));
+        assert!(matches!(mpc_parse("test", "1abc", &mpc_ident()), MpcResult::Err(_)));
+
+        let opt_sign = mpc_maybe(mpc_char('-'));
+        let cloned = opt_sign.clone();
+        assert_eq!(
+            mpc_parse("test", "-5", &mpc_and(vec![opt_sign, mpc_digits()], mpcf_strfold)).expect_ok_str(),
+            Some("-5")
+        );
+        assert_eq!(
+            mpc_parse("test", "5", &mpc_and(vec![cloned, mpc_digits()], mpcf_strfold)).expect_ok_str(),
+            Some("5")
+        );
     }
 
     trait ExpectOkStr {

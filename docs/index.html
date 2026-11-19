@@ -496,11 +496,14 @@ fn main() {
         <tbody>
           <tr><td><code>mpc_and(parsers, fold)</code></td><td>Combinator</td><td>Matches a sequence of parsers and applies <code>fold</code></td></tr>
           <tr><td><code>mpc_or(parsers)</code></td><td>Combinator</td><td>Tries alternatives sequentially with cursor backtracking</td></tr>
+          <tr><td><code>mpc_maybe(p)</code></td><td>Combinator</td><td>Optional parser (matches <code>p</code> or succeeds without consuming)</td></tr>
           <tr><td><code>mpc_many(p, fold)</code> / <code>mpc_many1(p, fold)</code></td><td>Combinator</td><td>Zero-or-more / one-or-more repetitions with zero-width loop guard</td></tr>
           <tr><td><code>mpc_count(n, p, fold)</code></td><td>Combinator</td><td>Matches parser <code>p</code> exactly <code>n</code> times</td></tr>
           <tr><td><code>mpc_sepby(p, sep, fold)</code> / <code>mpc_sepby1(p, sep, fold)</code></td><td>Combinator</td><td>Separated item repetitions; rolls back orphaned trailing separator</td></tr>
           <tr><td><code>mpcf_strfold</code>, <code>mpcf_fst</code>, <code>mpcf_null</code></td><td>Fold</td><td>Concatenate strings, pick first element, or return unit <code>()</code></td></tr>
           <tr><td><code>mpc_digit</code>, <code>mpc_digits</code>, <code>mpc_hexdigit</code>, <code>mpc_octdigit</code></td><td>Utility</td><td>Numeric character and digit-run parsers</td></tr>
+          <tr><td><code>mpc_int</code>, <code>mpc_hex</code>, <code>mpc_oct</code>, <code>mpc_number</code>, <code>mpc_real</code>, <code>mpc_float</code></td><td>Token</td><td>Signed integers, hex/oct literals, real numbers, and floats</td></tr>
+          <tr><td><code>mpc_char_lit</code>, <code>mpc_string_lit</code>, <code>mpc_regex_lit</code>, <code>mpc_ident</code></td><td>Token</td><td>Escaped char/string/regex literals and identifiers</td></tr>
           <tr><td><code>mpc_alpha</code>, <code>mpc_alphanum</code>, <code>mpc_lower</code>, <code>mpc_upper</code>, <code>mpc_underscore</code></td><td>Utility</td><td>Alphabetic, alphanumeric, and identifier character classes</td></tr>
           <tr><td><code>mpc_whitespace</code>, <code>mpc_whitespaces</code>, <code>mpc_blank</code>, <code>mpc_newline</code>, <code>mpc_tab</code></td><td>Utility</td><td>Whitespace and line-break matchers</td></tr>
           <tr><td><code>mpc_eoi()</code>, <code>mpc_soi()</code>, <code>mpc_boundary()</code></td><td>Anchor</td><td>End of input, start of input, and word boundary anchors</td></tr>
@@ -707,17 +710,17 @@ classDiagram
             <td><strong>Sprint 4</strong></td>
             <td><span class="status-pill status-done">Done</span></td>
             <td><code>#[cfg(test)]</code> unit test suite (15 tests), <code>Anchor</code> evaluation, and <code>And</code>/<code>Count</code> rollback</td>
-            <td><code>src/lib.rs</code></td>
+            <td><code>d4c73f5</code>, <code>src/lib.rs</code></td>
           </tr>
           <tr>
             <td><strong>Sprint 5</strong></td>
-            <td><span class="status-pill status-next">Next</span></td>
-            <td>High-level token &amp; literal parsers (<code>int</code>, <code>hex</code>, <code>oct</code>, <code>float</code>, <code>string_lit</code>, <code>ident</code>)</td>
+            <td><span class="status-pill status-done">Done</span></td>
+            <td>High-level token &amp; literal parsers (<code>int</code>, <code>hex</code>, <code>oct</code>, <code>number</code>, <code>real</code>, <code>float</code>, <code>char_lit</code>, <code>string_lit</code>, <code>regex_lit</code>, <code>ident</code>), <code>mpc_maybe</code>, <code>Clone</code></td>
             <td><code>src/lib.rs</code>, <code>README.md</code></td>
           </tr>
           <tr>
             <td><strong>Sprint 6</strong></td>
-            <td><span class="status-pill status-planned">Planned</span></td>
+            <td><span class="status-pill status-next">Next</span></td>
             <td>Recursive <code>MpcAst</code> assembly, rich <code>MpcErr::print()</code>, and v0.1.0 crate readiness</td>
             <td><code>src/lib.rs</code>, <code>examples/</code></td>
           </tr>
@@ -736,8 +739,8 @@ classDiagram
           <tr><td><code>US-04</code></td><td>Implement <code>MpcParserType::Anchor</code> for <code>mpc_soi</code>, <code>mpc_eoi</code>, <code>mpc_boundary</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-done">Done</span></td></tr>
           <tr><td><code>US-05</code></td><td>Transactional state rollback in <code>mpc_and</code> and <code>mpc_count</code></td><td>High</td><td class="num">3</td><td><span class="status-pill status-done">Done</span></td></tr>
           <tr><td><code>US-06</code></td><td>Automated <code>#[cfg(test)]</code> unit test suite in <code>src/lib.rs</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-done">Done</span></td></tr>
-          <tr><td><code>US-07</code></td><td>Built-in numeric, literal, and identifier parsers (line 715 <code>TODO</code>)</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-next">Backlog</span></td></tr>
-          <tr><td><code>US-08</code></td><td>Recursive <code>MpcAst</code> tree builder and full <code>MpcErr::print()</code> diagnostics</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-planned">Backlog</span></td></tr>
+          <tr><td><code>US-07</code></td><td>Built-in numeric, literal, and identifier parsers (<code>mpc_int</code>, <code>mpc_ident</code>, etc.)</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-done">Done</span></td></tr>
+          <tr><td><code>US-08</code></td><td>Recursive <code>MpcAst</code> tree builder and full <code>MpcErr::print()</code> diagnostics</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-next">Backlog</span></td></tr>
         </tbody>
       </table>
     </section>
@@ -770,7 +773,7 @@ flowchart LR
         </tbody>
       </table>
 
-      <h3>Rust TDD Unit Test Suite (<code>src/lib.rs</code> — 15 Tests)</h3>
+      <h3>Rust TDD Unit Test Suite (<code>src/lib.rs</code> — 19 Tests)</h3>
       <pre><code>#[cfg(test)]
 mod tests {
     use super::*;

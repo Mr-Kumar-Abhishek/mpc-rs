@@ -145,6 +145,7 @@ pub enum MpcResult {
 |----------|-------------|---------|
 | `mpc_and(parsers, fold)` | Sequence parsers | `mpc_and(vec![a, b], fold_fn)` |
 | `mpc_or(parsers)` | Alternative parsers | `mpc_or(vec![a, b])` |
+| `mpc_maybe(parser)` | Optional parser (or pass) | `mpc_maybe(sign)` |
 | `mpc_many(parser, fold)` | Zero or more | `mpc_many(digit, strfold)` |
 | `mpc_many1(parser, fold)` | One or more | `mpc_many1(digit, strfold)` |
 | `mpc_count(n, parser, fold)` | Exactly n times | `mpc_count(3, digit, strfold)` |
@@ -157,6 +158,18 @@ pub enum MpcResult {
 |----------|-------------|
 | `mpc_digit()` | Single digit (0-9) |
 | `mpc_digits()` | One or more digits |
+| `mpc_hexdigit()` / `mpc_hexdigits()` | Hexadecimal digit(s) |
+| `mpc_octdigit()` / `mpc_octdigits()` | Octal digit(s) |
+| `mpc_int()` | Signed or unsigned integer |
+| `mpc_hex()` | Hexadecimal integer (`0x...`) |
+| `mpc_oct()` | Octal integer (`0o...` or `0...`) |
+| `mpc_number()` | Hex, octal, or integer literal |
+| `mpc_real()` | Real number (decimal and/or exponent) |
+| `mpc_float()` | Real number with optional `f`/`F` suffix |
+| `mpc_char_lit()` | Single-quoted character literal |
+| `mpc_string_lit()` | Double-quoted string literal |
+| `mpc_regex_lit()` | Slash-delimited regex literal |
+| `mpc_ident()` | Identifier (`[a-zA-Z_][a-zA-Z0-9_]*`) |
 | `mpc_alpha()` | Alphabetic character |
 | `mpc_alphanum()` | Alphanumeric character |
 | `mpc_whitespace()` | Single whitespace char |

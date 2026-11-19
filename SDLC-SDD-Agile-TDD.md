@@ -180,9 +180,9 @@ Aligning with the **Basic COCOMO Organic** profile in [COCOMO-cost-estimate.md](
 | **Sprint 1** | Done | Project bootstrap, core types, primitive parsers, license, README, GitHub Actions CI | `8e3881e`, `90f223b`, `0d68218`, `0f61ba5`, `0fcaf25` |
 | **Sprint 2** | Done | Combinators, folds, utility parsers, and backtracking / zero-width / EOF fixes | `b4d7be4`, `768c404`, `9808616`, `4c623fc`, `668282c`, `d23c999`, `5d1027b` |
 | **Sprint 3** | Done | COCOMO cost estimation, pricing assumptions, and SDLC/SDD/Agile/TDD engineering docs | `0bd572f`, `2636438`, `4c17b72`, `c2e24ba`, `SDLC-SDD-Agile-TDD.md` |
-| **Sprint 4** | Done | Unit test suite (`#[cfg(test)]`), `Anchor` evaluation (`soi`/`eoi`/`boundary`), and `And`/`Count` rollback | `src/lib.rs` |
-| **Sprint 5** | Next | Higher-level token & literal parsers (`int`, `hex`, `oct`, `number`, `real`, `float`, `char_lit`, `string_lit`, `regex_lit`, `ident`) | `src/lib.rs`, `README.md` |
-| **Sprint 6** | Planned | Recursive `MpcAst` assembly, complete `MpcErr::print()`, benchmarks, and `v0.1.0` crate readiness | `src/lib.rs`, `examples/` |
+| **Sprint 4** | Done | Unit test suite (`#[cfg(test)]`), `Anchor` evaluation (`soi`/`eoi`/`boundary`), and `And`/`Count` rollback | `d4c73f5`, `src/lib.rs` |
+| **Sprint 5** | Done | Higher-level token & literal parsers (`int`, `hex`, `oct`, `number`, `real`, `float`, `char_lit`, `string_lit`, `regex_lit`, `ident`), `mpc_maybe`, `Clone` derive | `src/lib.rs`, `README.md` |
+| **Sprint 6** | Next | Recursive `MpcAst` assembly, complete `MpcErr::print()`, benchmarks, and `v0.1.0` crate readiness | `src/lib.rs`, `examples/` |
 
 ### 3.3 Product Backlog
 
@@ -193,8 +193,8 @@ Aligning with the **Basic COCOMO Organic** profile in [COCOMO-cost-estimate.md](
 | **US-03** | As a project maintainer, I need CI and cost/engineering docs. | Medium | 3 | Done | `.github/workflows/rust.yml`, `COCOMO-cost-estimate.md`, and `SDLC-SDD-Agile-TDD.md` are up to date. |
 | **US-04** | As a developer, I need `mpc_soi`, `mpc_eoi`, and `mpc_boundary` to enforce input boundaries. | High | 5 | Done | `MpcParserType::Anchor` evaluates `f(prev, next)` and returns `MpcResult::Err` on mismatch. |
 | **US-05** | As a grammar author, I need `mpc_and` and `mpc_count` to roll back on partial sequence failure. | High | 3 | Done | `input.pos` and `input.state` equal pre-call values whenever `And` or `Count` returns `Err`. |
-| **US-06** | As a contributor, I need an automated `cargo test` unit test suite in `src/lib.rs`. | High | 5 | Done | 15 unit tests cover primitives, combinators, anchors, rollback, UTF-8 row/col tracking, and edge cases. |
-| **US-07** | As a language builder, I need built-in numeric, literal, and identifier parsers (`mpc_int`, `mpc_ident`, etc.). | Medium | 8 | Backlog | Resolves line 715 `TODO` in `src/lib.rs` with unit tests for valid and malformed tokens. |
+| **US-06** | As a contributor, I need an automated `cargo test` unit test suite in `src/lib.rs`. | High | 5 | Done | 19 unit tests cover primitives, combinators, anchors, token/literal parsers, rollback, and UTF-8 row/col tracking. |
+| **US-07** | As a language builder, I need built-in numeric, literal, and identifier parsers (`mpc_int`, `mpc_ident`, etc.). | Medium | 8 | Done | Implemented `mpc_maybe`, `mpc_int`, `mpc_hex`, `mpc_oct`, `mpc_number`, `mpc_real`, `mpc_float`, `mpc_escape_seq`, `mpc_char_lit`, `mpc_string_lit`, `mpc_regex_lit`, `mpc_ident`, and `Clone` derive with unit tests. |
 | **US-08** | As a parser user, I need full `MpcAst` trees and formatted `MpcErr::print()` diagnostics. | Medium | 8 | Backlog | `Tag`/`Root` build hierarchical `MpcAst` nodes; `MpcErr::print()` outputs file, line, column, expected, and received. |
 
 ### 3.4 Definition of Done (DoD)
@@ -241,7 +241,7 @@ The May 2026 stabilization commits map directly to regression tests that belong 
 
 ### 4.3 Rust TDD Unit Test Suite (`src/lib.rs`)
 
-Sprint 4 integrated a 15-test `#[cfg(test)] mod tests` suite directly into `src/lib.rs` covering Sprint 2 regression fixes alongside `US-04` (`Anchor` evaluation) and `US-05` (`And`/`Count` transactional rollback). Representative Sprint 4 TDD tests include:
+Sprint 4 integrated a 15-test `#[cfg(test)] mod tests` suite directly into `src/lib.rs` and Sprint 5 expanded it to 19 tests covering token/literal parsers (`US-07`) alongside Sprint 2 regressions, `US-04` (`Anchor` evaluation), and `US-05` (`And`/`Count` transactional rollback). Representative Sprint 4 TDD tests include:
 
 ```rust
 #[cfg(test)]
