@@ -657,16 +657,14 @@ classDiagram
           <h4>Implemented Invariants</h4>
           <ul>
             <li><strong>UTF-8 Cursor Safety:</strong> <code>advance()</code> increments byte offset by <code>c.len_utf8()</code> while maintaining logical <code>pos</code>, <code>row</code>, and <code>col</code>.</li>
-            <li><strong>Backtracking Snapshots:</strong> <code>String</code>, <code>Or</code>, <code>SepBy</code>, and <code>SepBy1</code> restore <code>(input.pos, input.state)</code> on failure.</li>
+            <li><strong>Backtracking Snapshots:</strong> <code>String</code>, <code>Or</code>, <code>And</code>, <code>Count</code>, <code>SepBy</code>, and <code>SepBy1</code> restore <code>(input.pos, input.state)</code> on failure.</li>
             <li><strong>Zero-Width Loop Guard:</strong> <code>Many</code> and <code>Many1</code> break when <code>input.pos == before</code>.</li>
-            <li><strong>Peek-Before-Advance:</strong> <code>Satisfy</code> peeks first; <code>NoneOf</code> fails cleanly at EOF.</li>
+            <li><strong>Peek-Before-Advance &amp; Anchors:</strong> <code>Satisfy</code> peeks first; <code>NoneOf</code> fails at EOF; <code>Anchor</code> evaluates <code>f(prev, next)</code>.</li>
           </ul>
         </div>
         <div class="card">
-          <h4>Open SDD Gaps (Targeted for Upcoming Sprints)</h4>
+          <h4>Open SDD Gaps (Targeted for Sprint 6)</h4>
           <ul>
-            <li><strong>Anchors:</strong> <code>MpcParserType::Anchor(_f)</code> currently returns <code>Ok(())</code> without checking <code>f(prev, next)</code>.</li>
-            <li><strong>Sequence Rollback:</strong> <code>And</code> and <code>Count</code> do not restore state when a later child parser fails.</li>
             <li><strong>AST Assembly:</strong> <code>Tag</code>/<code>Root</code> do not yet collect recursive child <code>MpcAst</code> nodes.</li>
             <li><strong>Error Formatting:</strong> <code>MpcErr::print()</code> only prints <code>failure</code> without line/column/expected details.</li>
           </ul>
@@ -707,13 +705,13 @@ classDiagram
           </tr>
           <tr>
             <td><strong>Sprint 4</strong></td>
-            <td><span class="status-pill status-next">Next</span></td>
-            <td><code>#[cfg(test)]</code> unit test suite, <code>Anchor</code> evaluation, and <code>And</code>/<code>Count</code> rollback</td>
+            <td><span class="status-pill status-done">Done</span></td>
+            <td><code>#[cfg(test)]</code> unit test suite (15 tests), <code>Anchor</code> evaluation, and <code>And</code>/<code>Count</code> rollback</td>
             <td><code>src/lib.rs</code></td>
           </tr>
           <tr>
             <td><strong>Sprint 5</strong></td>
-            <td><span class="status-pill status-planned">Planned</span></td>
+            <td><span class="status-pill status-next">Next</span></td>
             <td>High-level token &amp; literal parsers (<code>int</code>, <code>hex</code>, <code>oct</code>, <code>float</code>, <code>string_lit</code>, <code>ident</code>)</td>
             <td><code>src/lib.rs</code>, <code>README.md</code></td>
           </tr>
@@ -735,10 +733,10 @@ classDiagram
           <tr><td><code>US-01</code></td><td>Primitive char/string parsers with safe rollback and EOF handling</td><td>High</td><td class="num">5</td><td><span class="status-pill status-done">Done</span></td></tr>
           <tr><td><code>US-02</code></td><td>Sequence, choice, repetition, and separator combinators</td><td>High</td><td class="num">8</td><td><span class="status-pill status-done">Done</span></td></tr>
           <tr><td><code>US-03</code></td><td>CI workflow, COCOMO estimate, and engineering / GitHub Pages docs</td><td>Medium</td><td class="num">3</td><td><span class="status-pill status-done">Done</span></td></tr>
-          <tr><td><code>US-04</code></td><td>Implement <code>MpcParserType::Anchor</code> for <code>mpc_soi</code>, <code>mpc_eoi</code>, <code>mpc_boundary</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-next">Backlog</span></td></tr>
-          <tr><td><code>US-05</code></td><td>Transactional state rollback in <code>mpc_and</code> and <code>mpc_count</code></td><td>High</td><td class="num">3</td><td><span class="status-pill status-next">Backlog</span></td></tr>
-          <tr><td><code>US-06</code></td><td>Automated <code>#[cfg(test)]</code> unit test suite in <code>src/lib.rs</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-next">Backlog</span></td></tr>
-          <tr><td><code>US-07</code></td><td>Built-in numeric, literal, and identifier parsers (line 715 <code>TODO</code>)</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-planned">Backlog</span></td></tr>
+          <tr><td><code>US-04</code></td><td>Implement <code>MpcParserType::Anchor</code> for <code>mpc_soi</code>, <code>mpc_eoi</code>, <code>mpc_boundary</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-done">Done</span></td></tr>
+          <tr><td><code>US-05</code></td><td>Transactional state rollback in <code>mpc_and</code> and <code>mpc_count</code></td><td>High</td><td class="num">3</td><td><span class="status-pill status-done">Done</span></td></tr>
+          <tr><td><code>US-06</code></td><td>Automated <code>#[cfg(test)]</code> unit test suite in <code>src/lib.rs</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-done">Done</span></td></tr>
+          <tr><td><code>US-07</code></td><td>Built-in numeric, literal, and identifier parsers (line 715 <code>TODO</code>)</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-next">Backlog</span></td></tr>
           <tr><td><code>US-08</code></td><td>Recursive <code>MpcAst</code> tree builder and full <code>MpcErr::print()</code> diagnostics</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-planned">Backlog</span></td></tr>
         </tbody>
       </table>
@@ -772,7 +770,7 @@ flowchart LR
         </tbody>
       </table>
 
-      <h3>Rust TDD Test Suite Template (<code>src/lib.rs</code>)</h3>
+      <h3>Rust TDD Unit Test Suite (<code>src/lib.rs</code> — 15 Tests)</h3>
       <pre><code>#[cfg(test)]
 mod tests {
     use super::*;
