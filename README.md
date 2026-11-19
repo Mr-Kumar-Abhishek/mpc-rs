@@ -4,10 +4,13 @@ A lightweight and powerful Parser Combinator library for Rust, ported from the C
 
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/docs-gh--pages-brightgreen)](https://mr-kumar-abhishek.github.io/mpc-rs/)
 
 ## About
 
 _mpc-rs_ is a parser combinator library that allows you to build powerful parsers using simple, composable building blocks. Parser combinators are functions that take parsers as input and return new parsers as output, enabling you to construct complex parsers from simple ones.
+
+Browse the live project documentation portal and Rustdoc API on GitHub Pages: [https://mr-kumar-abhishek.github.io/mpc-rs/](https://mr-kumar-abhishek.github.io/mpc-rs/).
 
 For a rough COCOMO-based project cost estimate covering the organic, semi-detached, and embedded variants, see [COCOMO-cost-estimate.md](COCOMO-cost-estimate.md).
 
