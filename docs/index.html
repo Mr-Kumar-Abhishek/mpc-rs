@@ -500,7 +500,7 @@ fn main() {
           <tr><td><code>mpc_many(p, fold)</code> / <code>mpc_many1(p, fold)</code></td><td>Combinator</td><td>Zero-or-more / one-or-more repetitions with zero-width loop guard</td></tr>
           <tr><td><code>mpc_count(n, p, fold)</code></td><td>Combinator</td><td>Matches parser <code>p</code> exactly <code>n</code> times</td></tr>
           <tr><td><code>mpc_sepby(p, sep, fold)</code> / <code>mpc_sepby1(p, sep, fold)</code></td><td>Combinator</td><td>Separated item repetitions; rolls back orphaned trailing separator</td></tr>
-          <tr><td><code>mpcf_strfold</code>, <code>mpcf_fst</code>, <code>mpcf_null</code></td><td>Fold</td><td>Concatenate strings, pick first element, or return unit <code>()</code></td></tr>
+          <tr><td><code>mpcf_strfold</code>, <code>mpcf_fst</code>, <code>mpcf_null</code>, <code>mpcf_fold_ast</code></td><td>Fold</td><td>Concatenate strings, pick first element, return unit <code>()</code>, or fold AST children</td></tr>
           <tr><td><code>mpc_digit</code>, <code>mpc_digits</code>, <code>mpc_hexdigit</code>, <code>mpc_octdigit</code></td><td>Utility</td><td>Numeric character and digit-run parsers</td></tr>
           <tr><td><code>mpc_int</code>, <code>mpc_hex</code>, <code>mpc_oct</code>, <code>mpc_number</code>, <code>mpc_real</code>, <code>mpc_float</code></td><td>Token</td><td>Signed integers, hex/oct literals, real numbers, and floats</td></tr>
           <tr><td><code>mpc_char_lit</code>, <code>mpc_string_lit</code>, <code>mpc_regex_lit</code>, <code>mpc_ident</code></td><td>Token</td><td>Escaped char/string/regex literals and identifiers</td></tr>
@@ -654,7 +654,7 @@ classDiagram
         </div>
       </div>
 
-      <h3>4.4 State Invariants &amp; Open Design Gaps</h3>
+      <h3>4.4 State Invariants &amp; Resolution Status</h3>
       <div class="two-col">
         <div class="card">
           <h4>Implemented Invariants</h4>
@@ -666,10 +666,10 @@ classDiagram
           </ul>
         </div>
         <div class="card">
-          <h4>Open SDD Gaps (Targeted for Sprint 6)</h4>
+          <h4>Sprint 6 Completed Capabilities</h4>
           <ul>
-            <li><strong>AST Assembly:</strong> <code>Tag</code>/<code>Root</code> do not yet collect recursive child <code>MpcAst</code> nodes.</li>
-            <li><strong>Error Formatting:</strong> <code>MpcErr::print()</code> only prints <code>failure</code> without line/column/expected details.</li>
+            <li><strong>Recursive AST Assembly:</strong> <code>MpcAst::add_child</code>, <code>add_tag</code>, <code>Tag</code>/<code>Root</code>, and <code>mpcf_fold_ast</code> build hierarchical syntax trees.</li>
+            <li><strong>Error Formatting:</strong> <code>Display for MpcErr</code>, <code>MpcErr::print()</code>, and <code>mpc_parse()</code> output file, line, column, expected, and received.</li>
           </ul>
         </div>
       </div>
@@ -716,13 +716,13 @@ classDiagram
             <td><strong>Sprint 5</strong></td>
             <td><span class="status-pill status-done">Done</span></td>
             <td>High-level token &amp; literal parsers (<code>int</code>, <code>hex</code>, <code>oct</code>, <code>number</code>, <code>real</code>, <code>float</code>, <code>char_lit</code>, <code>string_lit</code>, <code>regex_lit</code>, <code>ident</code>), <code>mpc_maybe</code>, <code>Clone</code></td>
-            <td><code>src/lib.rs</code>, <code>README.md</code></td>
+            <td><code>07da919</code>, <code>src/lib.rs</code>, <code>README.md</code></td>
           </tr>
           <tr>
             <td><strong>Sprint 6</strong></td>
-            <td><span class="status-pill status-next">Next</span></td>
-            <td>Recursive <code>MpcAst</code> assembly, rich <code>MpcErr::print()</code>, and v0.1.0 crate readiness</td>
-            <td><code>src/lib.rs</code>, <code>examples/</code></td>
+            <td><span class="status-pill status-done">Done</span></td>
+            <td>Recursive <code>MpcAst</code> assembly (<code>mpcf_fold_ast</code>), formatted <code>MpcErr</code> diagnostics, AST example, and CI release gating</td>
+            <td><code>src/lib.rs</code>, <code>examples/</code>, <code>.github/workflows/rust.yml</code></td>
           </tr>
         </tbody>
       </table>
@@ -740,7 +740,7 @@ classDiagram
           <tr><td><code>US-05</code></td><td>Transactional state rollback in <code>mpc_and</code> and <code>mpc_count</code></td><td>High</td><td class="num">3</td><td><span class="status-pill status-done">Done</span></td></tr>
           <tr><td><code>US-06</code></td><td>Automated <code>#[cfg(test)]</code> unit test suite in <code>src/lib.rs</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-done">Done</span></td></tr>
           <tr><td><code>US-07</code></td><td>Built-in numeric, literal, and identifier parsers (<code>mpc_int</code>, <code>mpc_ident</code>, etc.)</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-done">Done</span></td></tr>
-          <tr><td><code>US-08</code></td><td>Recursive <code>MpcAst</code> tree builder and full <code>MpcErr::print()</code> diagnostics</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-next">Backlog</span></td></tr>
+          <tr><td><code>US-08</code></td><td>Recursive <code>MpcAst</code> tree builder, formatted <code>MpcErr</code> diagnostics, and CI release gating</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-done">Done</span></td></tr>
         </tbody>
       </table>
     </section>
@@ -773,7 +773,7 @@ flowchart LR
         </tbody>
       </table>
 
-      <h3>Rust TDD Unit Test Suite (<code>src/lib.rs</code> — 19 Tests)</h3>
+      <h3>Rust TDD Unit Test Suite (<code>src/lib.rs</code> — 21 Tests)</h3>
       <pre><code>#[cfg(test)]
 mod tests {
     use super::*;

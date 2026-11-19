@@ -44,4 +44,22 @@ fn main() {
             e.print();
         }
     }
+
+    // Test AST construction with mpca_root, mpca_tag, and mpcf_fold_ast
+    let number = mpca_tag(mpc_digits(), "number");
+    let op = mpca_tag(mpc_oneof("+-"), "op");
+    let expr = mpca_root(mpca_tag(
+        mpc_and(vec![number.clone(), op, number], mpcf_fold_ast),
+        "expr",
+    ));
+    match mpc_parse("expr", "12+34", &expr) {
+        MpcResult::Ok(val) => {
+            if let Some(ast) = val.downcast_ref::<MpcAst>() {
+                ast.print();
+            }
+        }
+        MpcResult::Err(e) => {
+            e.print();
+        }
+    }
 }

@@ -151,14 +151,14 @@ classDiagram
    - `NoneOf` returns `MpcResult::Err` with `"unexpected end of input"` when `input.peek()` is `None`.
    - `Anchor` inspects `prev` (`'\0'` at `input.pos == 0`, otherwise `input.string[..input.pos].chars().next_back()`) and `next` (`input.peek().unwrap_or('\0')`), returning `MpcResult::Err` when `f(prev, next)` evaluates to `false`.
 
-### 2.4 Design Refinements & Remaining Open Gaps
+### 2.4 Design Refinements & Resolution Status
 
-| Area | Location in `src/lib.rs` | Status | Current / Planned Behavior |
+| Area | Location in `src/lib.rs` | Status | Resolution Summary |
 |---|---|---|---|
 | **Anchors** | `MpcParserType::Anchor(f)` | Resolved (Sprint 4) | Evaluates `f(prev, next)` against previous/peeked UTF-8 chars (`'\0'` at boundaries) and returns `MpcErr` on mismatch |
 | **Sequence Rollback** | `MpcParserType::And`, `Count` | Resolved (Sprint 4) | Snapshots `(saved_pos, saved_state)` on entry and restores both on element failure |
-| **AST Construction** | `MpcParserType::Tag`, `Root` | Open (Sprint 6) | `Tag` formats debug string of `MpcVal`; `Root` passes value through — planned: recursive `MpcAst` node collection |
-| **Error Formatting** | `MpcErr::print` | Open (Sprint 6) | Prints `Error: <failure>` only (`TODO`) — planned: format `filename`, 1-based `row + 1` / `col + 1`, `expected`, and `received` |
+| **AST Construction** | `MpcParserType::Tag`, `Root`, `mpcf_fold_ast` | Resolved (Sprint 6) | `MpcAst::add_child`/`add_tag`, `Tag`/`Root` tagging with `start_state`, and `mpcf_fold_ast` build recursive AST trees |
+| **Error Formatting** | `Display for MpcErr`, `MpcErr::print`, `mpc_parse` | Resolved (Sprint 6) | Propagates `filename` and formats `filename:row:col: error: failure (expected ..., received ...)` |
 
 ---
 
@@ -181,8 +181,8 @@ Aligning with the **Basic COCOMO Organic** profile in [COCOMO-cost-estimate.md](
 | **Sprint 2** | Done | Combinators, folds, utility parsers, and backtracking / zero-width / EOF fixes | `b4d7be4`, `768c404`, `9808616`, `4c623fc`, `668282c`, `d23c999`, `5d1027b` |
 | **Sprint 3** | Done | COCOMO cost estimation, pricing assumptions, and SDLC/SDD/Agile/TDD engineering docs | `0bd572f`, `2636438`, `4c17b72`, `c2e24ba`, `SDLC-SDD-Agile-TDD.md` |
 | **Sprint 4** | Done | Unit test suite (`#[cfg(test)]`), `Anchor` evaluation (`soi`/`eoi`/`boundary`), and `And`/`Count` rollback | `d4c73f5`, `src/lib.rs` |
-| **Sprint 5** | Done | Higher-level token & literal parsers (`int`, `hex`, `oct`, `number`, `real`, `float`, `char_lit`, `string_lit`, `regex_lit`, `ident`), `mpc_maybe`, `Clone` derive | `src/lib.rs`, `README.md` |
-| **Sprint 6** | Next | Recursive `MpcAst` assembly, complete `MpcErr::print()`, benchmarks, and `v0.1.0` crate readiness | `src/lib.rs`, `examples/` |
+| **Sprint 5** | Done | Higher-level token & literal parsers (`int`, `hex`, `oct`, `number`, `real`, `float`, `char_lit`, `string_lit`, `regex_lit`, `ident`), `mpc_maybe`, `Clone` derive | `07da919`, `src/lib.rs`, `README.md` |
+| **Sprint 6** | Done | Recursive `MpcAst` assembly (`mpcf_fold_ast`), complete `MpcErr` `Display`/`print()`, AST example, and CI release gating | `src/lib.rs`, `examples/simple_test.rs`, `.github/workflows/rust.yml` |
 
 ### 3.3 Product Backlog
 
@@ -193,9 +193,9 @@ Aligning with the **Basic COCOMO Organic** profile in [COCOMO-cost-estimate.md](
 | **US-03** | As a project maintainer, I need CI and cost/engineering docs. | Medium | 3 | Done | `.github/workflows/rust.yml`, `COCOMO-cost-estimate.md`, and `SDLC-SDD-Agile-TDD.md` are up to date. |
 | **US-04** | As a developer, I need `mpc_soi`, `mpc_eoi`, and `mpc_boundary` to enforce input boundaries. | High | 5 | Done | `MpcParserType::Anchor` evaluates `f(prev, next)` and returns `MpcResult::Err` on mismatch. |
 | **US-05** | As a grammar author, I need `mpc_and` and `mpc_count` to roll back on partial sequence failure. | High | 3 | Done | `input.pos` and `input.state` equal pre-call values whenever `And` or `Count` returns `Err`. |
-| **US-06** | As a contributor, I need an automated `cargo test` unit test suite in `src/lib.rs`. | High | 5 | Done | 19 unit tests cover primitives, combinators, anchors, token/literal parsers, rollback, and UTF-8 row/col tracking. |
+| **US-06** | As a contributor, I need an automated `cargo test` unit test suite in `src/lib.rs`. | High | 5 | Done | 21 unit tests cover primitives, combinators, anchors, token/literal parsers, AST trees, error formatting, rollback, and UTF-8 tracking. |
 | **US-07** | As a language builder, I need built-in numeric, literal, and identifier parsers (`mpc_int`, `mpc_ident`, etc.). | Medium | 8 | Done | Implemented `mpc_maybe`, `mpc_int`, `mpc_hex`, `mpc_oct`, `mpc_number`, `mpc_real`, `mpc_float`, `mpc_escape_seq`, `mpc_char_lit`, `mpc_string_lit`, `mpc_regex_lit`, `mpc_ident`, and `Clone` derive with unit tests. |
-| **US-08** | As a parser user, I need full `MpcAst` trees and formatted `MpcErr::print()` diagnostics. | Medium | 8 | Backlog | `Tag`/`Root` build hierarchical `MpcAst` nodes; `MpcErr::print()` outputs file, line, column, expected, and received. |
+| **US-08** | As a parser user, I need full `MpcAst` trees and formatted `MpcErr::print()` diagnostics. | Medium | 8 | Done | `Tag`/`Root`/`mpcf_fold_ast` build hierarchical `MpcAst` nodes; `Display for MpcErr` and `MpcErr::print()` output file, line, column, expected, and received; CI runs release tests. |
 
 ### 3.4 Definition of Done (DoD)
 
@@ -241,7 +241,7 @@ The May 2026 stabilization commits map directly to regression tests that belong 
 
 ### 4.3 Rust TDD Unit Test Suite (`src/lib.rs`)
 
-Sprint 4 integrated a 15-test `#[cfg(test)] mod tests` suite directly into `src/lib.rs` and Sprint 5 expanded it to 19 tests covering token/literal parsers (`US-07`) alongside Sprint 2 regressions, `US-04` (`Anchor` evaluation), and `US-05` (`And`/`Count` transactional rollback). Representative Sprint 4 TDD tests include:
+Sprint 4 integrated a 15-test `#[cfg(test)] mod tests` suite directly into `src/lib.rs`, Sprint 5 expanded it to 19 tests for token/literal parsers (`US-07`), and Sprint 6 completed all 21 tests covering recursive `MpcAst` hierarchy construction and formatted `MpcErr` diagnostics (`US-08`). Representative Sprint 4 TDD tests include:
 
 ```rust
 #[cfg(test)]
@@ -430,18 +430,13 @@ Run the release profile before merging release milestones, tagging a version, or
 
 ### 5.4 CI Pipeline Integration
 
-Currently, [`.github/workflows/rust.yml`](.github/workflows/rust.yml) executes debug build and test verification on every `push` and `pull_request` to `master`:
+[`.github/workflows/rust.yml`](.github/workflows/rust.yml) executes both debug development builds/tests and final release gating on every `push` and `pull_request` to `master`:
 
 ```yaml
 - name: Build
   run: cargo build --verbose
 - name: Run tests
   run: cargo test --verbose
-```
-
-For final release gating (Sprint 6), extend the workflow or add a release-verification step so both profiles are validated automatically:
-
-```yaml
 - name: Final Release Build
   run: cargo build --release --verbose
 - name: Final Release Tests

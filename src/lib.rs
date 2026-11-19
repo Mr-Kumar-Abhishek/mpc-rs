@@ -40,8 +40,39 @@ impl MpcErr {
     }
 
     pub fn print(&self) {
-        println!("Error: {}", self.failure);
-        // TODO: Implement full printing
+        println!("{}", self);
+    }
+}
+
+impl std::fmt::Display for MpcErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let filename = if self.filename.is_empty() {
+            "<input>"
+        } else {
+            &self.filename
+        };
+        write!(
+            f,
+            "{}:{}:{}: error: {}",
+            filename,
+            self.state.row + 1,
+            self.state.col + 1,
+            self.failure
+        )?;
+        if !self.expected.is_empty() {
+            let received = if self.received == '\0' {
+                "end of input".to_string()
+            } else {
+                format!("'{}'", self.received)
+            };
+            write!(
+                f,
+                " (expected {}, received {})",
+                self.expected.join(", "),
+                received
+            )?;
+        }
+        Ok(())
     }
 }
 
@@ -98,7 +129,7 @@ impl MpcParser {
 }
 
 /// AST Type
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MpcAst {
     pub tag: String,
     pub contents: String,
@@ -115,6 +146,19 @@ impl MpcAst {
             state: MpcState::default(),
             children_num: 0,
             children: Vec::new(),
+        }
+    }
+
+    pub fn add_child(&mut self, child: MpcAst) {
+        self.children.push(Box::new(child));
+        self.children_num = self.children.len() as i32;
+    }
+
+    pub fn add_tag(&mut self, tag: &str) {
+        if self.tag.is_empty() {
+            self.tag = tag.to_string();
+        } else {
+            self.tag = format!("{}|{}", self.tag, tag);
         }
     }
 
@@ -413,20 +457,47 @@ impl MpcParser {
                 MpcResult::Ok(folded)
             }
             MpcParserType::Tag(ref parser, ref tag) => {
+                let start_state = input.state;
                 match parser.parse(input) {
                     MpcResult::Ok(val) => {
-                        // Create AST node with tag
-                        let ast = MpcAst::new(tag, &format!("{:?}", val));
+                        let val = match val.downcast::<MpcAst>() {
+                            Ok(mut ast) => {
+                                ast.add_tag(tag);
+                                return MpcResult::Ok(ast);
+                            }
+                            Err(val) => val,
+                        };
+                        let mut ast = match val.downcast::<String>() {
+                            Ok(s) => MpcAst::new(tag, &s),
+                            Err(_) => MpcAst::new(tag, ""),
+                        };
+                        ast.state = start_state;
                         MpcResult::Ok(Box::new(ast))
                     }
                     MpcResult::Err(e) => MpcResult::Err(e),
                 }
             }
             MpcParserType::Root(ref parser) => {
+                let start_state = input.state;
                 match parser.parse(input) {
                     MpcResult::Ok(val) => {
-                        // Make it root - for now, just return as is since AST handling needs refactoring
-                        MpcResult::Ok(val)
+                        let val = match val.downcast::<MpcAst>() {
+                            Ok(mut ast) => {
+                                if ast.tag.is_empty() {
+                                    ast.tag = ">".to_string();
+                                } else if ast.tag != ">" && !ast.tag.starts_with(">|") {
+                                    ast.tag = format!(">|{}", ast.tag);
+                                }
+                                return MpcResult::Ok(ast);
+                            }
+                            Err(val) => val,
+                        };
+                        let mut ast = match val.downcast::<String>() {
+                            Ok(s) => MpcAst::new(">", &s),
+                            Err(_) => MpcAst::new(">", ""),
+                        };
+                        ast.state = start_state;
+                        MpcResult::Ok(Box::new(ast))
                     }
                     MpcResult::Err(e) => MpcResult::Err(e),
                 }
@@ -564,7 +635,15 @@ impl MpcParser {
 // Main parsing function
 pub fn mpc_parse(filename: &str, string: &str, parser: &MpcParser) -> MpcResult {
     let mut input = MpcInput::new(filename, string);
-    parser.parse(&mut input)
+    match parser.parse(&mut input) {
+        MpcResult::Ok(val) => MpcResult::Ok(val),
+        MpcResult::Err(mut e) => {
+            if e.filename.is_empty() {
+                e.filename = filename.to_string();
+            }
+            MpcResult::Err(e)
+        }
+    }
 }
 
 // Combinator Parsers
@@ -647,6 +726,40 @@ pub fn mpcf_fst(_n: i32, xs: Vec<MpcVal>) -> MpcVal {
 
 pub fn mpcf_null(_n: i32, _xs: Vec<MpcVal>) -> MpcVal {
     Box::new(())
+}
+
+pub fn mpcf_fold_ast(_n: i32, xs: Vec<MpcVal>) -> MpcVal {
+    let mut children: Vec<MpcAst> = Vec::new();
+    for x in xs {
+        let x = match x.downcast::<MpcAst>() {
+            Ok(ast) => {
+                if ast.tag.is_empty() && ast.contents.is_empty() && !ast.children.is_empty() {
+                    children.extend(ast.children.into_iter().map(|c| *c));
+                } else {
+                    children.push(*ast);
+                }
+                continue;
+            }
+            Err(x) => x,
+        };
+        if let Ok(s) = x.downcast::<String>() {
+            if !s.is_empty() {
+                children.push(MpcAst::new("", &s));
+            }
+        }
+    }
+    if children.is_empty() {
+        return Box::new(MpcAst::new("", ""));
+    }
+    if children.len() == 1 {
+        return Box::new(children.into_iter().next().unwrap());
+    }
+    let mut parent = MpcAst::new("", "");
+    parent.state = children[0].state;
+    for child in children {
+        parent.add_child(child);
+    }
+    Box::new(parent)
 }
 
 // Utility Parsers
@@ -1170,6 +1283,48 @@ mod tests {
             mpc_parse("test", "5", &mpc_and(vec![cloned, mpc_digits()], mpcf_strfold)).expect_ok_str(),
             Some("5")
         );
+    }
+
+    // --- Sprint 6 (US-08) Recursive AST & Formatted Error Tests ---
+
+    #[test]
+    fn ast_tag_root_and_fold_ast_build_hierarchy() {
+        let number = mpca_tag(mpc_digits(), "number");
+        let op = mpca_tag(mpc_oneof("+-"), "op");
+        let expr = mpca_root(mpca_tag(
+            mpc_and(vec![number.clone(), op, number], mpcf_fold_ast),
+            "expr",
+        ));
+
+        match mpc_parse("calc.mpc", "12+34", &expr) {
+            MpcResult::Ok(val) => {
+                let ast = val.downcast_ref::<MpcAst>().expect("expected MpcAst");
+                assert_eq!(ast.tag, ">|expr");
+                assert_eq!(ast.children_num, 3);
+                assert_eq!(ast.children[0].tag, "number");
+                assert_eq!(ast.children[0].contents, "12");
+                assert_eq!(ast.children[1].tag, "op");
+                assert_eq!(ast.children[1].contents, "+");
+                assert_eq!(ast.children[2].tag, "number");
+                assert_eq!(ast.children[2].contents, "34");
+            }
+            MpcResult::Err(err) => panic!("unexpected err: {}", err),
+        }
+    }
+
+    #[test]
+    fn error_display_and_filename_propagation() {
+        let parser = mpc_and(vec![mpc_digits(), mpc_eoi()], mpcf_fst);
+        match mpc_parse("calc.mpc", "12x", &parser) {
+            MpcResult::Err(err) => {
+                assert_eq!(err.filename, "calc.mpc");
+                let msg = err.to_string();
+                assert!(msg.contains("calc.mpc:1:3: error:"));
+                assert!(msg.contains("expected eoi"));
+                assert!(msg.contains("received 'x'"));
+            }
+            MpcResult::Ok(_) => panic!("expected parse error"),
+        }
     }
 
     trait ExpectOkStr {

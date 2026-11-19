@@ -193,6 +193,7 @@ pub enum MpcResult {
 | `mpcf_strfold` | Concatenate strings |
 | `mpcf_fst` | Return first result |
 | `mpcf_null` | Return unit |
+| `mpcf_fold_ast` | Collect and fold `MpcAst` child nodes |
 
 ### Parsing
 
