@@ -2,7 +2,7 @@
 //!
 //! A lightweight and powerful Parser Combinator library for Rust.
 //!
-//! This is a port of the C library mpc (https://github.com/orangeduck/mpc)
+//! This is a port of the C library mpc (<https://github.com/orangeduck/mpc>)
 
 pub type MpcVal = Box<dyn std::any::Any>;
 
@@ -372,19 +372,39 @@ impl MpcParser {
             MpcParserType::LiftVal(f) => {
                 MpcResult::Ok(f())
             }
-            MpcParserType::Anchor(_f) => {
-                // TODO: implement anchor
-                MpcResult::Ok(Box::new(()))
+            MpcParserType::Anchor(f) => {
+                let prev = if input.pos == 0 {
+                    '\0'
+                } else {
+                    input.string[..input.pos].chars().next_back().unwrap_or('\0')
+                };
+                let next = input.peek().unwrap_or('\0');
+                if f(prev, next) {
+                    MpcResult::Ok(Box::new(()))
+                } else {
+                    MpcResult::Err(MpcErr::new(
+                        input.state,
+                        vec![self.name.clone()],
+                        format!("expected {}", self.name),
+                        next,
+                    ))
+                }
             }
             MpcParserType::State => {
                 MpcResult::Ok(Box::new(input.state))
             }
             MpcParserType::And(ref parsers, fold) => {
+                let saved_pos = input.pos;
+                let saved_state = input.state;
                 let mut results = Vec::new();
                 for parser in parsers {
                     match parser.parse(input) {
                         MpcResult::Ok(val) => results.push(val),
-                        MpcResult::Err(e) => return MpcResult::Err(e),
+                        MpcResult::Err(e) => {
+                            input.pos = saved_pos;
+                            input.state = saved_state;
+                            return MpcResult::Err(e);
+                        }
                     }
                 }
                 let folded = fold(results.len() as i32, results);
@@ -465,11 +485,17 @@ impl MpcParser {
                 MpcResult::Ok(folded)
             }
             MpcParserType::Count(n, ref parser, fold) => {
+                let saved_pos = input.pos;
+                let saved_state = input.state;
                 let mut results = Vec::new();
                 for _ in 0..*n {
                     match parser.parse(input) {
                         MpcResult::Ok(val) => results.push(val),
-                        MpcResult::Err(e) => return MpcResult::Err(e),
+                        MpcResult::Err(e) => {
+                            input.pos = saved_pos;
+                            input.state = saved_state;
+                            return MpcResult::Err(e);
+                        }
                     }
                 }
                 let folded = fold(results.len() as i32, results);
@@ -725,5 +751,250 @@ pub fn mpca_root(parser: MpcParser) -> MpcParser {
     MpcParser {
         name: "root".to_string(),
         parser_type: MpcParserType::Root(Box::new(parser)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lift_answer() -> MpcVal {
+        Box::new(42_i32)
+    }
+
+    #[test]
+    fn basic_char_any_range_oneof_primitives() {
+        let mut input = MpcInput::new("test", "a5x");
+        assert_eq!(
+            mpc_any()
+                .parse(&mut input)
+                .expect_ok_str(),
+            Some("a")
+        );
+        assert_eq!(
+            mpc_range('0', '9')
+                .parse(&mut input)
+                .expect_ok_str(),
+            Some("5")
+        );
+        assert_eq!(
+            mpc_oneof("xyz")
+                .parse(&mut input)
+                .expect_ok_str(),
+            Some("x")
+        );
+        assert!(matches!(mpc_any().parse(&mut input), MpcResult::Err(_)));
+
+        assert_eq!(
+            mpc_parse("test", "z", &mpc_char('z')).expect_ok_str(),
+            Some("z")
+        );
+        assert!(matches!(mpc_parse("test", "a", &mpc_char('z')), MpcResult::Err(_)));
+    }
+
+    #[test]
+    fn noneof_matches_char_and_fails_at_end_of_input() {
+        let parser = mpc_noneof("abc");
+        assert_eq!(mpc_parse("test", "z", &parser).expect_ok_str(), Some("z"));
+        assert!(matches!(mpc_parse("test", "a", &parser), MpcResult::Err(_)));
+        assert!(matches!(mpc_parse("test", "", &parser), MpcResult::Err(_)));
+    }
+
+    #[test]
+    fn satisfy_failure_does_not_advance_input() {
+        let parser = mpc_satisfy(|c| c.is_ascii_digit());
+        let mut input = MpcInput::new("test", "abc");
+
+        let res = parser.parse(&mut input);
+        assert!(matches!(res, MpcResult::Err(_)));
+        assert_eq!(input.pos, 0);
+        assert_eq!(input.state.col, 0);
+        assert_eq!(mpc_parse("test", "7", &parser).expect_ok_str(), Some("7"));
+    }
+
+    #[test]
+    fn string_partial_match_backtracks() {
+        let parser = mpc_string("hello");
+        let mut input = MpcInput::new("test", "hel");
+
+        let res = parser.parse(&mut input);
+        assert!(matches!(res, MpcResult::Err(_)));
+        assert_eq!(input.pos, 0);
+        assert_eq!(input.state.pos, 0);
+        assert_eq!(input.remaining(), "hel");
+
+        assert_eq!(
+            mpc_parse("test", "hello!", &parser).expect_ok_str(),
+            Some("hello")
+        );
+    }
+
+    #[test]
+    fn control_parsers_pass_fail_lift_and_state() {
+        assert!(matches!(mpc_parse("test", "abc", &mpc_pass()), MpcResult::Ok(_)));
+        assert!(matches!(mpc_parse("test", "abc", &mpc_fail("boom")), MpcResult::Err(_)));
+
+        match mpc_parse("test", "", &mpc_lift(lift_answer)) {
+            MpcResult::Ok(v) => assert_eq!(v.downcast_ref::<i32>(), Some(&42)),
+            MpcResult::Err(e) => panic!("unexpected err: {}", e.failure),
+        }
+
+        match mpc_parse("test", "", &mpc_lift_val(lift_answer)) {
+            MpcResult::Ok(v) => assert_eq!(v.downcast_ref::<i32>(), Some(&42)),
+            MpcResult::Err(e) => panic!("unexpected err: {}", e.failure),
+        }
+
+        let mut input = MpcInput::new("test", "ab");
+        let _ = mpc_char('a').parse(&mut input);
+        match mpc_state().parse(&mut input) {
+            MpcResult::Ok(v) => {
+                let st = v.downcast_ref::<MpcState>().copied();
+                assert_eq!(st.map(|s| (s.pos, s.col)), Some((1, 1)));
+            }
+            MpcResult::Err(e) => panic!("unexpected err: {}", e.failure),
+        }
+    }
+
+    #[test]
+    fn or_backtracks_after_partial_branch_failure() {
+        let parser = mpc_or(vec![mpc_string("abc"), mpc_string("abd")]);
+        assert_eq!(mpc_parse("test", "abd", &parser).expect_ok_str(), Some("abd"));
+    }
+
+    #[test]
+    fn many_and_many1_handle_repetitions_and_zero_width_guard() {
+        let zero_width = mpc_many(mpc_pass(), mpcf_strfold);
+        assert_eq!(mpc_parse("test", "abc", &zero_width).expect_ok_str(), Some(""));
+
+        let zero_width_1 = mpc_many1(mpc_pass(), mpcf_strfold);
+        assert_eq!(mpc_parse("test", "abc", &zero_width_1).expect_ok_str(), Some(""));
+
+        let letters = mpc_many1(mpc_alpha(), mpcf_strfold);
+        assert_eq!(mpc_parse("test", "hi1", &letters).expect_ok_str(), Some("hi"));
+        assert!(matches!(mpc_parse("test", "1", &letters), MpcResult::Err(_)));
+    }
+
+    #[test]
+    fn sepby_and_sepby1_backtrack_trailing_separator() {
+        let parser = mpc_sepby(mpc_digits(), mpc_char(','), mpcf_strfold);
+        let mut input = MpcInput::new("test", "12,34,");
+        assert_eq!(parser.parse(&mut input).expect_ok_str(), Some("1234"));
+        assert_eq!(input.remaining(), ",");
+
+        assert_eq!(mpc_parse("test", "", &parser).expect_ok_str(), Some(""));
+
+        let parser1 = mpc_sepby1(mpc_digits(), mpc_char(','), mpcf_strfold);
+        let mut input1 = MpcInput::new("test", "9,");
+        assert_eq!(parser1.parse(&mut input1).expect_ok_str(), Some("9"));
+        assert_eq!(input1.remaining(), ",");
+        assert!(matches!(mpc_parse("test", "", &parser1), MpcResult::Err(_)));
+    }
+
+    #[test]
+    fn fold_functions_and_character_utilities() {
+        let fst_parser = mpc_and(vec![mpc_char('a'), mpc_char('b')], mpcf_fst);
+        assert_eq!(mpc_parse("test", "ab", &fst_parser).expect_ok_str(), Some("a"));
+
+        let null_parser = mpc_and(vec![mpc_char('a'), mpc_char('b')], mpcf_null);
+        match mpc_parse("test", "ab", &null_parser) {
+            MpcResult::Ok(v) => assert!(v.is::<()>()),
+            MpcResult::Err(e) => panic!("unexpected err: {}", e.failure),
+        }
+
+        assert_eq!(mpc_parse("test", "019", &mpc_digits()).expect_ok_str(), Some("019"));
+        assert_eq!(mpc_parse("test", "1aF9", &mpc_hexdigits()).expect_ok_str(), Some("1aF9"));
+        assert_eq!(mpc_parse("test", "0758", &mpc_octdigits()).expect_ok_str(), Some("075"));
+        assert_eq!(
+            mpc_parse("test", "a1B", &mpc_many1(mpc_alphanum(), mpcf_strfold)).expect_ok_str(),
+            Some("a1B")
+        );
+        assert_eq!(
+            mpc_parse("test", " \t\nx", &mpc_whitespaces()).expect_ok_str(),
+            Some(" \t\n")
+        );
+    }
+
+    #[test]
+    fn utf8_input_tracks_row_col_and_byte_pos() {
+        let parser = mpc_many(mpc_any(), mpcf_strfold);
+        let mut input = MpcInput::new("test", "a\né");
+
+        assert_eq!(parser.parse(&mut input).expect_ok_str(), Some("a\né"));
+        assert_eq!(input.state.pos, 3);
+        assert_eq!(input.state.row, 1);
+        assert_eq!(input.state.col, 1);
+        assert_eq!(input.pos, "a\né".len());
+    }
+
+    // --- Sprint 4 (US-04 & US-05) TDD Specifications ---
+
+    #[test]
+    fn soi_anchor_matches_only_at_start_of_input() {
+        let mut input = MpcInput::new("test", "ab");
+        assert!(matches!(mpc_soi().parse(&mut input), MpcResult::Ok(_)));
+
+        let _ = mpc_char('a').parse(&mut input);
+        assert!(matches!(mpc_soi().parse(&mut input), MpcResult::Err(_)));
+    }
+
+    #[test]
+    fn eoi_anchor_matches_only_at_end_of_input() {
+        let parser = mpc_and(vec![mpc_digits(), mpc_eoi()], mpcf_fst);
+        assert_eq!(mpc_parse("test", "123", &parser).expect_ok_str(), Some("123"));
+        assert!(matches!(mpc_parse("test", "123abc", &parser), MpcResult::Err(_)));
+    }
+
+    #[test]
+    fn boundary_newline_anchor_checks_non_word_transitions() {
+        let mut input_space = MpcInput::new("test", " hello");
+        assert!(matches!(mpc_boundary_newline().parse(&mut input_space), MpcResult::Ok(_)));
+
+        let mut input_word = MpcInput::new("test", "hello");
+        assert!(matches!(mpc_boundary_newline().parse(&mut input_word), MpcResult::Err(_)));
+
+        let mut input_mid = MpcInput::new("test", "  a");
+        let _ = mpc_char(' ').parse(&mut input_mid);
+        assert!(matches!(mpc_boundary_newline().parse(&mut input_mid), MpcResult::Ok(_)));
+        let _ = mpc_char(' ').parse(&mut input_mid);
+        assert!(matches!(mpc_boundary_newline().parse(&mut input_mid), MpcResult::Err(_)));
+    }
+
+    #[test]
+    fn and_restores_input_state_when_later_parser_fails() {
+        let parser = mpc_and(vec![mpc_char('a'), mpc_char('b')], mpcf_strfold);
+        let mut input = MpcInput::new("test", "ax");
+
+        let res = parser.parse(&mut input);
+        assert!(matches!(res, MpcResult::Err(_)));
+        assert_eq!(input.pos, 0);
+        assert_eq!(input.state.pos, 0);
+        assert_eq!(input.state.col, 0);
+        assert_eq!(input.remaining(), "ax");
+    }
+
+    #[test]
+    fn count_restores_input_state_when_later_iteration_fails() {
+        let parser = mpc_count(3, mpc_char('a'), mpcf_strfold);
+        let mut input = MpcInput::new("test", "aab");
+
+        let res = parser.parse(&mut input);
+        assert!(matches!(res, MpcResult::Err(_)));
+        assert_eq!(input.pos, 0);
+        assert_eq!(input.state.pos, 0);
+        assert_eq!(input.state.col, 0);
+        assert_eq!(input.remaining(), "aab");
+    }
+
+    trait ExpectOkStr {
+        fn expect_ok_str(&self) -> Option<&str>;
+    }
+
+    impl ExpectOkStr for MpcResult {
+        fn expect_ok_str(&self) -> Option<&str> {
+            match self {
+                MpcResult::Ok(val) => val.downcast_ref::<String>().map(String::as_str),
+                MpcResult::Err(_) => None,
+            }
+        }
     }
 }
