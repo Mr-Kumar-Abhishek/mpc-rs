@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mpc-rs — Micro Parser Combinators for Rust</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #1f2630;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #9198a1;
+      --accent: #f97316;
+      --accent-soft: rgba(249, 115, 22, 0.14);
+      --link: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --blue: #58a6ff;
+      --code-bg: #0b0f14;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    html[data-theme="light"] {
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --surface-2: #f0f3f6;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #59636e;
+      --accent: #d95700;
+      --accent-soft: rgba(217, 87, 0, 0.1);
+      --link: #0969da;
+      --green: #1a7f37;
+      --yellow: #9a6700;
+      --blue: #0969da;
+      --code-bg: #f6f8fa;
+      --shadow: 0 8px 24px rgba(31, 35, 40, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header.topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+      border: 1px solid var(--accent);
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .badge.rust { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .badge.mit { border-color: var(--blue); color: var(--blue); }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.38rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .btn:hover { border-color: var(--accent); text-decoration: none; }
+    .btn.primary { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+    .btn.primary:hover { opacity: 0.92; }
+
+    nav.subnav {
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .subnav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.45rem 1.25rem;
+      display: flex;
+      gap: 1rem;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .subnav a {
+      white-space: nowrap;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--muted);
+      padding: 0.25rem 0;
+    }
+
+    .subnav a:hover { color: var(--accent); text-decoration: none; }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+    }
+
+    .hero h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.75rem, 3vw, 2.4rem);
+      line-height: 1.2;
+    }
+
+    .hero p.lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0 0 1.25rem;
+      max-width: 72ch;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+    }
+
+    .stat-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 1.25rem; font-weight: 700; margin-top: 0.15rem; }
+
+    section.doc-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow);
+      scroll-margin-top: 7.5rem;
+    }
+
+    section.doc-section h2 {
+      margin-top: 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.45rem;
+    }
+
+    section.doc-section h3 {
+      margin-top: 1.5rem;
+      margin-bottom: 0.6rem;
+      font-size: 1.1rem;
+      color: var(--accent);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.15rem;
+    }
+
+    .card h4 { margin-top: 0; margin-bottom: 0.5rem; }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.88em;
+    }
+
+    p code, li code, td code {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.08rem 0.35rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.85rem 0 1.25rem;
+      font-size: 0.92rem;
+      display: block;
+      overflow-x: auto;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--surface-2);
+      font-weight: 600;
+    }
+
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .status-pill {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-done { background: rgba(63, 185, 80, 0.15); color: var(--green); border: 1px solid var(--green); }
+    .status-next { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+    .status-planned { background: rgba(88, 166, 255, 0.15); color: var(--blue); border: 1px solid var(--blue); }
+
+    .diagram-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+
+    .formula-box {
+      background: var(--code-bg);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.85rem 1rem;
+      margin: 0.75rem 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92rem;
+    }
+
+    footer {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.88rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark">mpc-rs</span>
+        <span>Micro Parser Combinators for Rust</span>
+        <div class="badges">
+          <span class="badge rust">v0.1.0 · Rust 2021 (1.70+)</span>
+          <span class="badge mit">MIT License</span>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="./mpc/index.html">Rustdoc API</a>
+        <a class="btn" href="https://github.com/Mr-Kumar-Abhishek/mpc-rs" target="_blank" rel="noopener">GitHub Repo</a>
+        <button class="btn" id="theme-toggle" type="button" aria-label="Toggle theme">Light Mode</button>
+      </div>
+    </div>
+    <nav class="subnav" aria-label="Section navigation">
+      <div class="subnav-inner">
+        <a href="#overview">Overview &amp; Quick Start</a>
+        <a href="#api">API Reference</a>
+        <a href="#cocomo">COCOMO Cost Estimate</a>
+        <a href="#sdlc-sdd">SDLC &amp; SDD</a>
+        <a href="#agile">Agile &amp; Sprint Roadmap</a>
+        <a href="#tdd">TDD &amp; Test Suite</a>
+        <a href="#builds">Debug vs. Release Builds</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>Micro Parser Combinators (<code>mpc-rs</code>)</h1>
+      <p class="lead">
+        A lightweight, zero-dependency Parser Combinator library for Rust, ported from Daniel Holden's C library
+        <a href="https://github.com/orangeduck/mpc" target="_blank" rel="noopener">mpc</a>.
+        Build composable, backtracking recursive-descent parsers using pure safe Rust.
+      </p>
+      <div class="hero-grid">
+        <div class="stat-card">
+          <div class="stat-label">Crate &amp; Edition</div>
+          <div class="stat-value"><code>mpc</code> v0.1.0 (2021)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Codebase Size</div>
+          <div class="stat-value">~0.78 KLOC (775 LOC)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">COCOMO (Organic)</div>
+          <div class="stat-value">1.84 PM · 3.14 mo</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Estimated Cost (USD)</div>
+          <div class="stat-value">$9,200 – $13,400</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. Overview & Quick Start -->
+    <section id="overview" class="doc-section">
+      <h2>1. Overview &amp; Quick Start</h2>
+      <div class="two-col">
+        <div class="card">
+          <h4>When to Use <code>mpc-rs</code></h4>
+          <ul>
+            <li>Build a new programming language</li>
+            <li>Parse a new or existing data format</li>
+            <li>Parse existing programming languages</li>
+            <li>Embed a domain-specific language (DSL)</li>
+            <li>Implement complex structured text processing</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Core Features</h4>
+          <ul>
+            <li><strong>Type-Generic:</strong> Works with arbitrary Rust types via <code>Box&lt;dyn Any&gt;</code></li>
+            <li><strong>Predictive Recursive Descent:</strong> Composable parsing with backtracking</li>
+            <li><strong>Zero External Dependencies:</strong> Single library crate in <code>src/lib.rs</code></li>
+            <li><strong>Position &amp; Error Reporting:</strong> Line, column, and expected tokens in <code>MpcErr</code></li>
+            <li><strong>Memory Safe:</strong> Pure safe Rust leveraging ownership</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Installation</h3>
+      <pre><code>[dependencies]
+mpc = { path = "../mpc-rs" }  # Adjust path as needed</code></pre>
+
+      <h3>Quick Start: Mathematical Expression Parser</h3>
+      <pre><code>use mpc::*;
+
+fn main() {
+    let number = mpc_digits();
+    let plus = mpc_char('+');
+
+    let expr = mpc_or(vec![
+        mpc_and(vec![number.clone(), plus.clone(), number.clone()], |_, xs| {
+            let a: i32 = xs[0].downcast_ref::&lt;String&gt;().unwrap().parse().unwrap();
+            let b: i32 = xs[2].downcast_ref::&lt;String&gt;().unwrap().parse().unwrap();
+            Box::new(a + b)
+        }),
+        number,
+    ]);
+
+    match mpc_parse("calc", "1+2", &amp;expr) {
+        MpcResult::Ok(val) =&gt; println!("Result: {}", val.downcast_ref::&lt;i32&gt;().unwrap()),
+        MpcResult::Err(err) =&gt; err.print(),
+    }
+}</code></pre>
+
+      <h3>Error Handling Pattern</h3>
+      <pre><code>match mpc_parse("input", "invalid", &amp;parser) {
+    MpcResult::Ok(result) =&gt; { /* Process result */ }
+    MpcResult::Err(err) =&gt; {
+        println!(
+            "Parse error at line {}, column {}: {}",
+            err.state.row + 1,
+            err.state.col + 1,
+            err.failure
+        );
+        println!("Expected: {}", err.expected.join(", "));
+    }
+}</code></pre>
+    </section>
+
+    <!-- 2. API Reference -->
+    <section id="api" class="doc-section">
+      <h2>2. Combinator &amp; Parser API Reference</h2>
+
+      <h3>Basic &amp; Control Parsers</h3>
+      <table>
+        <thead>
+          <tr><th>Function</th><th>Category</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>mpc_any()</code></td><td>Basic</td><td>Matches any single UTF-8 character</td></tr>
+          <tr><td><code>mpc_char(c)</code></td><td>Basic</td><td>Matches a specific character</td></tr>
+          <tr><td><code>mpc_range(s, e)</code></td><td>Basic</td><td>Matches a character in inclusive range <code>s..=e</code></td></tr>
+          <tr><td><code>mpc_oneof(s)</code></td><td>Basic</td><td>Matches any character contained in string <code>s</code></td></tr>
+          <tr><td><code>mpc_noneof(s)</code></td><td>Basic</td><td>Matches any character not in <code>s</code> (fails at EOF)</td></tr>
+          <tr><td><code>mpc_satisfy(f)</code></td><td>Basic</td><td>Matches a character satisfying predicate <code>f(char) -&gt; bool</code></td></tr>
+          <tr><td><code>mpc_string(s)</code></td><td>Basic</td><td>Matches an exact string with full backtracking on mismatch</td></tr>
+          <tr><td><code>mpc_pass()</code> / <code>mpc_fail(msg)</code></td><td>Control</td><td>Always succeeds (zero-width) / always fails with <code>msg</code></td></tr>
+          <tr><td><code>mpc_lift(f)</code> / <code>mpc_lift_val(f)</code></td><td>Control</td><td>Consumes no input and returns the result of <code>f()</code></td></tr>
+          <tr><td><code>mpc_anchor(f)</code> / <code>mpc_state()</code></td><td>Control</td><td>Boundary anchor check / returns current <code>MpcState</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Combinators, Folds, Utilities &amp; AST</h3>
+      <table>
+        <thead>
+          <tr><th>Function</th><th>Category</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>mpc_and(parsers, fold)</code></td><td>Combinator</td><td>Matches a sequence of parsers and applies <code>fold</code></td></tr>
+          <tr><td><code>mpc_or(parsers)</code></td><td>Combinator</td><td>Tries alternatives sequentially with cursor backtracking</td></tr>
+          <tr><td><code>mpc_many(p, fold)</code> / <code>mpc_many1(p, fold)</code></td><td>Combinator</td><td>Zero-or-more / one-or-more repetitions with zero-width loop guard</td></tr>
+          <tr><td><code>mpc_count(n, p, fold)</code></td><td>Combinator</td><td>Matches parser <code>p</code> exactly <code>n</code> times</td></tr>
+          <tr><td><code>mpc_sepby(p, sep, fold)</code> / <code>mpc_sepby1(p, sep, fold)</code></td><td>Combinator</td><td>Separated item repetitions; rolls back orphaned trailing separator</td></tr>
+          <tr><td><code>mpcf_strfold</code>, <code>mpcf_fst</code>, <code>mpcf_null</code></td><td>Fold</td><td>Concatenate strings, pick first element, or return unit <code>()</code></td></tr>
+          <tr><td><code>mpc_digit</code>, <code>mpc_digits</code>, <code>mpc_hexdigit</code>, <code>mpc_octdigit</code></td><td>Utility</td><td>Numeric character and digit-run parsers</td></tr>
+          <tr><td><code>mpc_alpha</code>, <code>mpc_alphanum</code>, <code>mpc_lower</code>, <code>mpc_upper</code>, <code>mpc_underscore</code></td><td>Utility</td><td>Alphabetic, alphanumeric, and identifier character classes</td></tr>
+          <tr><td><code>mpc_whitespace</code>, <code>mpc_whitespaces</code>, <code>mpc_blank</code>, <code>mpc_newline</code>, <code>mpc_tab</code></td><td>Utility</td><td>Whitespace and line-break matchers</td></tr>
+          <tr><td><code>mpc_eoi()</code>, <code>mpc_soi()</code>, <code>mpc_boundary()</code></td><td>Anchor</td><td>End of input, start of input, and word boundary anchors</td></tr>
+          <tr><td><code>mpca_tag(p, tag)</code>, <code>mpca_root(p)</code>, <code>mpc_parse(file, input, p)</code></td><td>AST &amp; Entry</td><td>Tag AST nodes, mark root, and run parser over string input</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 3. COCOMO Cost Estimate -->
+    <section id="cocomo" class="doc-section">
+      <h2>3. COCOMO Cost Estimate</h2>
+      <p>
+        Rough effort, duration, staffing, and pricing estimate for the current state of <code>mpc-rs</code> using the
+        <strong>Basic COCOMO</strong> model across Organic, Semi-detached, and Embedded modes
+        (from <code>COCOMO-cost-estimate.md</code>).
+      </p>
+
+      <div class="two-col">
+        <div class="card">
+          <h4>Assumptions</h4>
+          <ul>
+            <li><strong>Estimated size:</strong> ~0.78 KLOC</li>
+            <li><strong>Source basis:</strong> ~775 lines of code across library and example files</li>
+            <li><strong>Model used:</strong> Basic COCOMO (effort unit: person-months, PM)</li>
+            <li><strong>Rate assumption:</strong> 5,000 USD per person-month for a small Rust project</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Basic COCOMO Formulas</h4>
+          <div class="formula-box">
+            Effort = a &times; (KLOC)<sup>b</sup> person-months<br />
+            Development Time = c &times; (Effort)<sup>d</sup> months<br />
+            Average Team Size = Effort / Time
+          </div>
+        </div>
+      </div>
+
+      <h3>Model Coefficients</h3>
+      <table>
+        <thead>
+          <tr><th>Model</th><th class="num">a</th><th class="num">b</th><th class="num">c</th><th class="num">d</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Organic</td><td class="num">2.4</td><td class="num">1.05</td><td class="num">2.5</td><td class="num">0.38</td></tr>
+          <tr><td>Semi-detached</td><td class="num">3.0</td><td class="num">1.12</td><td class="num">2.5</td><td class="num">0.35</td></tr>
+          <tr><td>Embedded</td><td class="num">3.6</td><td class="num">1.20</td><td class="num">2.5</td><td class="num">0.32</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Estimated Results</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th class="num">Effort (PM)</th>
+            <th class="num">Duration (months)</th>
+            <th class="num">Average Team Size</th>
+            <th class="num">Estimated Price (USD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Organic</strong></td><td class="num">1.84</td><td class="num">3.14</td><td class="num">0.58</td><td class="num">$9,200</td></tr>
+          <tr><td>Semi-detached</td><td class="num">2.27</td><td class="num">3.33</td><td class="num">0.68</td><td class="num">$11,350</td></tr>
+          <tr><td>Embedded</td><td class="num">2.68</td><td class="num">3.43</td><td class="num">0.78</td><td class="num">$13,400</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4. SDLC & SDD -->
+    <section id="sdlc-sdd" class="doc-section">
+      <h2>4. Software Development Life Cycle (SDLC) &amp; Software Design Document (SDD)</h2>
+
+      <h3>4.1 Six-Phase SDLC Pipeline</h3>
+      <p>
+        <code>mpc-rs</code> follows an iterative six-phase lifecycle tailored to a zero-dependency Rust crate verified by
+        <code>cargo test</code> and GitHub Actions (<code>.github/workflows/rust.yml</code>):
+      </p>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart LR
+    REQ["1. Requirements Analysis"] --> DES["2. System and Software Design (SDD)"]
+    DES --> IMP["3. Implementation (Rust)"]
+    IMP --> TST["4. Testing and CI (TDD + cargo test)"]
+    TST --> DEP["5. Packaging and Release (Cargo)"]
+    DEP --> MNT["6. Maintenance and Hardening"]
+    MNT --> REQ
+        </div>
+      </div>
+
+      <h3>4.2 Layered System Architecture</h3>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart TD
+    APP["Client Code and Examples (examples/simple_test.rs)"] --> API["Public Entry and Utility Layer (mpc_parse, mpc_digit, mpc_alpha, mpca_tag)"]
+    API --> COMB["Combinator and Fold Layer (mpc_and, mpc_or, mpc_many, mpc_sepby, mpcf_strfold)"]
+    COMB --> ENG["Core Recursive-Descent Engine (MpcParser::parse and MpcParserType)"]
+    ENG --> IO["Input Cursor and Diagnostics (MpcInput, MpcState, MpcResult, MpcErr, MpcAst)"]
+        </div>
+      </div>
+
+      <h3>4.3 Core Data Model</h3>
+      <div class="diagram-box">
+        <div class="mermaid">
+classDiagram
+    class MpcState {
+        +i64 pos
+        +i64 row
+        +i64 col
+        +i32 term
+    }
+    class MpcInput {
+        +String filename
+        +MpcState state
+        +str string
+        +usize pos
+        +remaining()
+        +peek()
+        +advance()
+    }
+    class MpcParser {
+        +String name
+        +MpcParserType parser_type
+        +parse(input)
+    }
+    class MpcErr {
+        +MpcState state
+        +i32 expected_num
+        +String filename
+        +String failure
+        +Vec expected
+        +char received
+        +print()
+    }
+    class MpcAst {
+        +String tag
+        +String contents
+        +MpcState state
+        +i32 children_num
+        +Vec children
+        +print()
+    }
+    MpcInput --> MpcState
+    MpcErr --> MpcState
+    MpcAst --> MpcState
+    MpcParser ..> MpcInput : mutates cursor
+    MpcParser ..> MpcErr : returns on failure
+    MpcParser ..> MpcAst : produces via Tag/Root
+        </div>
+      </div>
+
+      <h3>4.4 State Invariants &amp; Open Design Gaps</h3>
+      <div class="two-col">
+        <div class="card">
+          <h4>Implemented Invariants</h4>
+          <ul>
+            <li><strong>UTF-8 Cursor Safety:</strong> <code>advance()</code> increments byte offset by <code>c.len_utf8()</code> while maintaining logical <code>pos</code>, <code>row</code>, and <code>col</code>.</li>
+            <li><strong>Backtracking Snapshots:</strong> <code>String</code>, <code>Or</code>, <code>SepBy</code>, and <code>SepBy1</code> restore <code>(input.pos, input.state)</code> on failure.</li>
+            <li><strong>Zero-Width Loop Guard:</strong> <code>Many</code> and <code>Many1</code> break when <code>input.pos == before</code>.</li>
+            <li><strong>Peek-Before-Advance:</strong> <code>Satisfy</code> peeks first; <code>NoneOf</code> fails cleanly at EOF.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Open SDD Gaps (Targeted for Upcoming Sprints)</h4>
+          <ul>
+            <li><strong>Anchors:</strong> <code>MpcParserType::Anchor(_f)</code> currently returns <code>Ok(())</code> without checking <code>f(prev, next)</code>.</li>
+            <li><strong>Sequence Rollback:</strong> <code>And</code> and <code>Count</code> do not restore state when a later child parser fails.</li>
+            <li><strong>AST Assembly:</strong> <code>Tag</code>/<code>Root</code> do not yet collect recursive child <code>MpcAst</code> nodes.</li>
+            <li><strong>Error Formatting:</strong> <code>MpcErr::print()</code> only prints <code>failure</code> without line/column/expected details.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Agile & Sprint Roadmap -->
+    <section id="agile" class="doc-section">
+      <h2>5. Agile Development &amp; Sprint Roadmap</h2>
+      <p>
+        Aligned with the COCOMO Organic schedule (~3.14 months / 6–7 two-week sprints for 1–2 contributors), work is organized into iterative sprints with continuous integration on <code>master</code>.
+      </p>
+
+      <h3>Sprint Roadmap</h3>
+      <table>
+        <thead>
+          <tr><th>Sprint</th><th>Status</th><th>Focus &amp; Deliverables</th><th>Commits / Files</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Sprint 1</strong></td>
+            <td><span class="status-pill status-done">Done</span></td>
+            <td>Core types, primitives, MIT license, Cargo metadata, README, GitHub Actions CI</td>
+            <td><code>8e3881e</code> – <code>0fcaf25</code></td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 2</strong></td>
+            <td><span class="status-pill status-done">Done</span></td>
+            <td>Combinators, folds, utilities, and backtracking / zero-width / EOF fixes</td>
+            <td><code>b4d7be4</code> – <code>5d1027b</code></td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 3</strong></td>
+            <td><span class="status-pill status-done">Done</span></td>
+            <td>COCOMO cost estimation, SDLC/SDD/Agile/TDD docs, and GitHub Pages portal</td>
+            <td><code>0bd572f</code> – <code>9c60d9f</code>, <code>docs/index.html</code></td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 4</strong></td>
+            <td><span class="status-pill status-next">Next</span></td>
+            <td><code>#[cfg(test)]</code> unit test suite, <code>Anchor</code> evaluation, and <code>And</code>/<code>Count</code> rollback</td>
+            <td><code>src/lib.rs</code></td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 5</strong></td>
+            <td><span class="status-pill status-planned">Planned</span></td>
+            <td>High-level token &amp; literal parsers (<code>int</code>, <code>hex</code>, <code>oct</code>, <code>float</code>, <code>string_lit</code>, <code>ident</code>)</td>
+            <td><code>src/lib.rs</code>, <code>README.md</code></td>
+          </tr>
+          <tr>
+            <td><strong>Sprint 6</strong></td>
+            <td><span class="status-pill status-planned">Planned</span></td>
+            <td>Recursive <code>MpcAst</code> assembly, rich <code>MpcErr::print()</code>, and v0.1.0 crate readiness</td>
+            <td><code>src/lib.rs</code>, <code>examples/</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Product Backlog</h3>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>User Story</th><th>Priority</th><th class="num">Points</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>US-01</code></td><td>Primitive char/string parsers with safe rollback and EOF handling</td><td>High</td><td class="num">5</td><td><span class="status-pill status-done">Done</span></td></tr>
+          <tr><td><code>US-02</code></td><td>Sequence, choice, repetition, and separator combinators</td><td>High</td><td class="num">8</td><td><span class="status-pill status-done">Done</span></td></tr>
+          <tr><td><code>US-03</code></td><td>CI workflow, COCOMO estimate, and engineering / GitHub Pages docs</td><td>Medium</td><td class="num">3</td><td><span class="status-pill status-done">Done</span></td></tr>
+          <tr><td><code>US-04</code></td><td>Implement <code>MpcParserType::Anchor</code> for <code>mpc_soi</code>, <code>mpc_eoi</code>, <code>mpc_boundary</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-next">Backlog</span></td></tr>
+          <tr><td><code>US-05</code></td><td>Transactional state rollback in <code>mpc_and</code> and <code>mpc_count</code></td><td>High</td><td class="num">3</td><td><span class="status-pill status-next">Backlog</span></td></tr>
+          <tr><td><code>US-06</code></td><td>Automated <code>#[cfg(test)]</code> unit test suite in <code>src/lib.rs</code></td><td>High</td><td class="num">5</td><td><span class="status-pill status-next">Backlog</span></td></tr>
+          <tr><td><code>US-07</code></td><td>Built-in numeric, literal, and identifier parsers (line 715 <code>TODO</code>)</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-planned">Backlog</span></td></tr>
+          <tr><td><code>US-08</code></td><td>Recursive <code>MpcAst</code> tree builder and full <code>MpcErr::print()</code> diagnostics</td><td>Medium</td><td class="num">8</td><td><span class="status-pill status-planned">Backlog</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 6. TDD & Test Suite -->
+    <section id="tdd" class="doc-section">
+      <h2>6. Test-Driven Development (TDD)</h2>
+      <div class="diagram-box">
+        <div class="mermaid">
+flowchart LR
+    RED["1. RED: Write failing #[test] specifying parser contract"] --> GREEN["2. GREEN: Implement minimal change in src/lib.rs to pass"]
+    GREEN --> REFACTOR["3. REFACTOR: Clean up rollback helpers and re-run cargo test"]
+    REFACTOR --> RED
+        </div>
+      </div>
+
+      <h3>Retroactive TDD Case Studies from Commit History</h3>
+      <table>
+        <thead>
+          <tr><th>Commit</th><th>Parser</th><th>Failure Mode (Red)</th><th>Minimal Fix (Green)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>b4d7be4</code></td><td><code>Satisfy</code></td><td>Consumed char even when predicate failed</td><td>Peek before advancing</td></tr>
+          <tr><td><code>768c404</code></td><td><code>String</code></td><td>Partial prefix match left cursor mid-string</td><td>Save &amp; restore <code>(saved_pos, saved_state)</code></td></tr>
+          <tr><td><code>9808616</code></td><td><code>Or</code></td><td>Failed branch poisoned input for next branch</td><td>Save &amp; restore state around each alternative</td></tr>
+          <tr><td><code>4c623fc</code></td><td><code>Many</code> / <code>Many1</code></td><td>Zero-width parsers looped infinitely</td><td>Break if <code>input.pos == before</code></td></tr>
+          <tr><td><code>668282c</code></td><td><code>SepBy</code> / <code>SepBy1</code></td><td>Orphaned trailing separator stayed consumed</td><td>Restore state before <code>sep</code> when item fails</td></tr>
+          <tr><td><code>d23c999</code></td><td><code>NoneOf</code></td><td>Did not fail consistently at EOF</td><td>Return <code>MpcResult::Err</code> when <code>peek()</code> is <code>None</code></td></tr>
+          <tr><td><code>5d1027b</code></td><td><code>mpc_boundary_newline</code></td><td>Boolean operator precedence ambiguity</td><td>Added explicit parentheses around negation clause</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Rust TDD Test Suite Template (<code>src/lib.rs</code>)</h3>
+      <pre><code>#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn satisfy_failure_does_not_advance_input() {
+        let parser = mpc_satisfy(|c| c.is_ascii_digit());
+        let mut input = MpcInput::new("test", "abc");
+        assert!(matches!(parser.parse(&amp;mut input), MpcResult::Err(_)));
+        assert_eq!(input.pos, 0);
+    }
+
+    #[test]
+    fn string_partial_match_backtracks() {
+        let parser = mpc_string("hello");
+        let mut input = MpcInput::new("test", "hel");
+        assert!(matches!(parser.parse(&amp;mut input), MpcResult::Err(_)));
+        assert_eq!(input.pos, 0);
+        assert_eq!(input.remaining(), "hel");
+    }
+
+    #[test]
+    fn or_backtracks_after_partial_branch_failure() {
+        let parser = mpc_or(vec![mpc_string("abc"), mpc_string("abd")]);
+        match mpc_parse("test", "abd", &amp;parser) {
+            MpcResult::Ok(val) =&gt; assert_eq!(val.downcast_ref::&lt;String&gt;().map(String::as_str), Some("abd")),
+            MpcResult::Err(err) =&gt; panic!("expected match, got: {}", err.failure),
+        }
+    }
+
+    #[test]
+    fn many_stops_on_zero_width_parser() {
+        let parser = mpc_many(mpc_pass(), mpcf_strfold);
+        match mpc_parse("test", "abc", &amp;parser) {
+            MpcResult::Ok(val) =&gt; assert_eq!(val.downcast_ref::&lt;String&gt;().map(String::as_str), Some("")),
+            MpcResult::Err(err) =&gt; panic!("unexpected error: {}", err.failure),
+        }
+    }
+
+    #[test]
+    fn sepby_backtracks_trailing_separator() {
+        let parser = mpc_sepby(mpc_digits(), mpc_char(','), mpcf_strfold);
+        let mut input = MpcInput::new("test", "12,34,");
+        match parser.parse(&amp;mut input) {
+            MpcResult::Ok(val) =&gt; {
+                assert_eq!(val.downcast_ref::&lt;String&gt;().map(String::as_str), Some("1234"));
+                assert_eq!(input.remaining(), ",");
+            }
+            MpcResult::Err(err) =&gt; panic!("unexpected error: {}", err.failure),
+        }
+    }
+}</code></pre>
+    </section>
+
+    <!-- 7. Debug vs Final Release Builds -->
+    <section id="builds" class="doc-section">
+      <h2>7. Build &amp; Test Profiles: Debug vs. Final Release</h2>
+
+      <table>
+        <thead>
+          <tr><th>Aspect</th><th>Debug Build (<code>dev</code> / <code>test</code> Profile)</th><th>Final Release Build (<code>release</code> Profile)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Purpose</strong></td><td>Iterative TDD cycles, step-through debugging, stack traces</td><td>Final acceptance testing, optimized execution, crate packaging</td></tr>
+          <tr><td><strong>Optimization</strong></td><td><code>opt-level = 0</code> (fast compile)</td><td><code>opt-level = 3</code> (full optimization)</td></tr>
+          <tr><td><strong>Debug Symbols</strong></td><td>Included (<code>debuginfo</code>)</td><td>Stripped / omitted by default</td></tr>
+          <tr><td><strong>Runtime Checks</strong></td><td><code>debug_assert!</code> and overflow checks enabled</td><td><code>debug_assert!</code> disabled</td></tr>
+          <tr><td><strong>Output Path</strong></td><td><code>target/debug/</code></td><td><code>target/release/</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="two-col">
+        <div class="card">
+          <h4>Debug Build Steps (Development &amp; Testing)</h4>
+          <pre><code># 1. Build library and examples (debug)
+cargo build --verbose
+cargo build --examples --verbose
+
+# 2. Run unit tests in debug mode
+cargo test --verbose
+
+# 3. Run with full backtraces on failure
+# PowerShell: $env:RUST_BACKTRACE=1; cargo test --verbose -- --nocapture
+RUST_BACKTRACE=1 cargo test --verbose -- --nocapture
+
+# 4. Run smoke example (debug)
+cargo run --example simple_test</code></pre>
+        </div>
+        <div class="card">
+          <h4>Final Release Build Steps (Final Testing &amp; Packaging)</h4>
+          <pre><code># 1. Build optimized release artifacts
+cargo build --release --verbose
+cargo build --release --examples --verbose
+
+# 2. Run final test suite under optimizations
+cargo test --release --verbose
+
+# 3. Run smoke example in release mode
+cargo run --release --example simple_test
+
+# 4. Verify Rustdoc and crate package contents
+cargo doc --no-deps
+cargo package --list</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>mpc-rs · MIT License · Ported from Daniel Holden's <code>mpc</code></span>
+    <span>
+      <a href="./mpc/index.html">Rustdoc API</a> ·
+      <a href="https://github.com/Mr-Kumar-Abhishek/mpc-rs" target="_blank" rel="noopener">Repository</a>
+    </span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn = document.getElementById("theme-toggle");
+
+      function initMermaid(theme) {
+        if (!window.mermaid) return;
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: theme === "light" ? "default" : "dark",
+          securityLevel: "loose"
+        });
+        mermaid.run({ querySelector: ".mermaid" });
+      }
+
+      document.querySelectorAll(".mermaid").forEach((el) => {
+        el.dataset.source = el.textContent.trim();
+      });
+
+      initMermaid(root.getAttribute("data-theme") || "dark");
+
+      btn.addEventListener("click", () => {
+        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        btn.textContent = next === "dark" ? "Light Mode" : "Dark Mode";
+        document.querySelectorAll(".mermaid").forEach((el) => {
+          el.removeAttribute("data-processed");
+          el.textContent = el.dataset.source;
+        });
+        initMermaid(next);
+      });
+    })();
+  </script>
+</body>
+</html>

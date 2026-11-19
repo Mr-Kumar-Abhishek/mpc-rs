@@ -1,0 +1,1 @@
+rd_("AhMicro Parser CombinatorsAoReturns the argument unchanged.000000BaCalls <code>U::from(self)</code>.000000hAST TypejError TypejState TypefParserkResult TypekParser Type")
