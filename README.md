@@ -11,6 +11,8 @@ _mpc-rs_ is a parser combinator library that allows you to build powerful parser
 
 For a rough COCOMO-based project cost estimate covering the organic, semi-detached, and embedded variants, see [COCOMO-cost-estimate.md](COCOMO-cost-estimate.md).
 
+For the project's Software Development Life Cycle (SDLC), Software Design Document (SDD), Agile sprint roadmap, and Test-Driven Development (TDD) methodology, see [SDLC-SDD-Agile-TDD.md](SDLC-SDD-Agile-TDD.md).
+
 ### When to Use mpc-rs
 
 You should consider using _mpc-rs_ when you need to:
@@ -266,16 +268,45 @@ match mpc_parse("input", "invalid", &parser) {
 
 ## Building and Testing
 
+### Debug Build & Development Testing
+
+Use the default `dev`/`test` profile (`target/debug/`) with debug symbols and runtime checks enabled for iterative development and TDD:
+
 ```bash
-# Build the library
-cargo build
+# Build the library and examples (debug)
+cargo build --verbose
 
-# Run tests
-cargo test
+# Run tests in debug mode
+cargo test --verbose
 
-# Run examples
-cargo run --bin simple_test
+# Run debug tests with full backtraces and stdout
+# PowerShell: $env:RUST_BACKTRACE=1; cargo test --verbose -- --nocapture
+RUST_BACKTRACE=1 cargo test --verbose -- --nocapture
+
+# Run example in debug mode
+cargo run --example simple_test
 ```
+
+### Final Release Build & Final Testing
+
+Use the optimized `release` profile (`target/release/`) for final pre-release verification and packaging checks:
+
+```bash
+# Build optimized release artifacts
+cargo build --release --verbose
+
+# Run final test suite under release optimizations
+cargo test --release --verbose
+
+# Run example in release mode
+cargo run --release --example simple_test
+
+# Verify documentation and package contents
+cargo doc --no-deps
+cargo package --list
+```
+
+For full lifecycle details, see [SDLC-SDD-Agile-TDD.md](SDLC-SDD-Agile-TDD.md#5-build--test-profiles-debug-vs-final-release).
 
 ## Performance
 
