@@ -16,6 +16,8 @@ For a rough COCOMO-based project cost estimate covering the organic, semi-detach
 
 For the project's Software Development Life Cycle (SDLC), Software Design Document (SDD), Agile sprint roadmap, and Test-Driven Development (TDD) methodology, see [SDLC-SDD-Agile-TDD.md](SDLC-SDD-Agile-TDD.md).
 
+For the 2,000-line parsing performance benchmark report (debug and release profiles), see [report/2000-line-parsing-speed-report.md](report/2000-line-parsing-speed-report.md).
+
 ### When to Use mpc-rs
 
 You should consider using _mpc-rs_ when you need to:
