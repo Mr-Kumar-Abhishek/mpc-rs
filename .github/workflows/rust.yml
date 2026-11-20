@@ -20,7 +20,11 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose -- --nocapture
+    - name: Run simple_test Example (Debug)
+      run: cargo run --example simple_test
     - name: Final Release Build
       run: cargo build --release --verbose
     - name: Final Release Tests
       run: cargo test --release --verbose -- --nocapture
+    - name: Run simple_test Example (Release)
+      run: cargo run --release --example simple_test
