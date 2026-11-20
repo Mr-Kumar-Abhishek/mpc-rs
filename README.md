@@ -18,6 +18,8 @@ For the project's Software Development Life Cycle (SDLC), Software Design Docume
 
 For the 2,000-line parsing performance benchmark report (debug and release profiles), see [report/2000-line-parsing-speed-report.md](report/2000-line-parsing-speed-report.md).
 
+For the smoke example (`simple_test`) and core unit test suite report (debug and release profiles), see [report/simple-tests-report.md](report/simple-tests-report.md).
+
 ### When to Use mpc-rs
 
 You should consider using _mpc-rs_ when you need to:
